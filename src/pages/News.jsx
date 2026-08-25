@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getArticles } from '../lib/api.js';
+import { useSEO } from '../lib/useSEO.js';
 
 const CATS = ['All', 'Cybersecurity', 'Cloud', 'Network', 'Fiber Optic', 'AI', 'Big Tech', 'Tech Business', 'Hardware'];
 
@@ -10,6 +11,12 @@ export default function News() {
   useEffect(() => {
     getArticles(cat === 'All' ? {} : { category: cat }).then(setArticles).catch(() => setArticles([]));
   }, [cat]);
+
+  useSEO({
+    title: cat === 'All' ? 'News' : `${cat} News`,
+    description: `The latest ${cat === 'All' ? 'technology' : cat.toLowerCase()} news and analysis from MySignal.`,
+    path: '/news'
+  });
 
   return (
     <main>

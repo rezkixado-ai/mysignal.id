@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS articles (
   is_featured INTEGER NOT NULL DEFAULT 0,
   is_breaking INTEGER NOT NULL DEFAULT 0,
   is_published INTEGER NOT NULL DEFAULT 1,
+  meta_title TEXT,                 -- SEO title override (Google/social); falls back to title
+  meta_description TEXT,           -- SEO meta description override; falls back to excerpt
+  focus_keyword TEXT,              -- primary keyword this article targets, for the SEO analyzer
   published_at TEXT NOT NULL DEFAULT (datetime('now')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

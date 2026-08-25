@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getArticleBySlug } from '../lib/api.js';
+import { useSEO, SITE_URL } from '../lib/useSEO.js';
 
 export default function ArticleDetail() {
   const { slug } = useParams();
@@ -10,6 +11,27 @@ export default function ArticleDetail() {
     setArticle(undefined);
     getArticleBySlug(slug).then(setArticle).catch(() => setArticle(null));
   }, [slug]);
+
+  useSEO({
+    title: article && article.meta_title ? article.meta_title : article?.title,
+    description: article ? (article.meta_description || article.excerpt) : undefined,
+    path: `/article/${slug}`,
+    image: article?.cover_media_type === 'image' ? article.cover_media_url : undefined,
+    type: 'article',
+    noindex: !article || article === null,
+    jsonLd: article ? {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: article.title,
+      description: article.excerpt || article.meta_description || '',
+      image: article.cover_media_type === 'image' && article.cover_media_url ? [article.cover_media_url] : undefined,
+      datePublished: article.published_at,
+      dateModified: article.updated_at || article.published_at,
+      author: { '@type': 'Organization', name: 'MySignal' },
+      publisher: { '@type': 'Organization', name: 'MySignal' },
+      mainEntityOfPage: `${SITE_URL}/article/${slug}`
+    } : undefined
+  });
 
   if (article === undefined) {
     return <main><section><div className="wrap"><p style={{ color: 'var(--text-faint)' }}>Loading…</p></div></section></main>;

@@ -29,6 +29,18 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# SEO: dynamic sitemap + robots (generated from the live database, so they
+# never go stale as content is published)
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/sitemap"
+  status = 200
+
+[[redirects]]
+  from = "/robots.txt"
+  to = "/.netlify/functions/robots"
+  status = 200
+
 # SPA fallback (must be last)
 [[redirects]]
   from = "/*"

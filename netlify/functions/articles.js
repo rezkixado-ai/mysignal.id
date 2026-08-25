@@ -38,12 +38,13 @@ export const handler = async (event) => {
     await db().execute({
       sql: `INSERT INTO articles
         (id, slug, title, excerpt, body_html, category, article_type, cover_media_type, cover_media_url,
-         read_minutes, is_featured, is_breaking, is_published)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         read_minutes, is_featured, is_breaking, is_published, meta_title, meta_description, focus_keyword)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       args: [
         id, slug, b.title || 'Untitled', b.excerpt || '', b.body_html || '', b.category || 'Tech Business',
         b.article_type || 'news', b.cover_media_type || 'image', b.cover_media_url || '',
-        b.read_minutes ?? 5, b.is_featured ?? 0, b.is_breaking ?? 0, b.is_published ?? 1
+        b.read_minutes ?? 5, b.is_featured ?? 0, b.is_breaking ?? 0, b.is_published ?? 1,
+        b.meta_title || '', b.meta_description || '', b.focus_keyword || ''
       ]
     });
 
@@ -66,12 +67,14 @@ export const handler = async (event) => {
     await db().execute({
       sql: `UPDATE articles SET
         title=?, excerpt=?, body_html=?, category=?, article_type=?, cover_media_type=?, cover_media_url=?,
-        read_minutes=?, is_featured=?, is_breaking=?, is_published=?, updated_at=datetime('now')
+        read_minutes=?, is_featured=?, is_breaking=?, is_published=?, meta_title=?, meta_description=?,
+        focus_keyword=?, updated_at=datetime('now')
         WHERE id=?`,
       args: [
         b.title, b.excerpt || '', b.body_html || '', b.category, b.article_type || 'news',
         b.cover_media_type || 'image', b.cover_media_url || '', b.read_minutes ?? 5,
-        b.is_featured ?? 0, b.is_breaking ?? 0, b.is_published ?? 1, b.id
+        b.is_featured ?? 0, b.is_breaking ?? 0, b.is_published ?? 1,
+        b.meta_title || '', b.meta_description || '', b.focus_keyword || '', b.id
       ]
     });
 

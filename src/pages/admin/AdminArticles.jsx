@@ -4,6 +4,7 @@ import {
 } from '../../lib/api.js';
 import RichTextEditor from '../../components/RichTextEditor.jsx';
 import MediaEmbedList from '../../components/MediaEmbedList.jsx';
+import SEOPanel from '../../components/SEOPanel.jsx';
 
 const CATEGORIES = ['Cybersecurity', 'Cloud', 'Network', 'Fiber Optic', 'AI', 'Big Tech', 'Tech Business', 'Hardware'];
 const TYPES = [
@@ -16,7 +17,8 @@ const TYPES = [
 
 const EMPTY = {
   id: null, slug: '', title: '', excerpt: '', body_html: '', category: 'Cybersecurity', article_type: 'news',
-  cover_media_type: 'image', cover_media_url: '', read_minutes: 5, is_featured: 0, is_breaking: 0, is_published: 1, media: []
+  cover_media_type: 'image', cover_media_url: '', read_minutes: 5, is_featured: 0, is_breaking: 0, is_published: 1,
+  meta_title: '', meta_description: '', focus_keyword: '', media: []
 };
 
 function Toast({ toast }) {
@@ -104,7 +106,7 @@ export default function AdminArticles() {
         {form.id && <button className="btn btn-ghost" onClick={resetForm}>+ New Article</button>}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.15fr', gap: 24, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20, alignItems: 'start' }}>
         <form className="card" onSubmit={handleSubmit}>
           <h3 style={{ fontSize: 15, marginBottom: 16 }}>{form.id ? 'Edit Article' : 'New Article'}</h3>
 
@@ -121,6 +123,23 @@ export default function AdminArticles() {
           <div className="field">
             <label>Excerpt</label>
             <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} placeholder="One or two sentences shown on cards" />
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--border)', margin: '18px 0', paddingTop: 18 }}>
+            <p style={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-faint)', marginBottom: 12 }}>SEO</p>
+
+            <div className="field">
+              <label>Focus Keyword</label>
+              <input type="text" placeholder="e.g. zero-day attack" value={form.focus_keyword} onChange={(e) => setForm({ ...form, focus_keyword: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>SEO Title (leave blank to use the title above)</label>
+              <input type="text" value={form.meta_title} onChange={(e) => setForm({ ...form, meta_title: e.target.value })} maxLength={70} />
+            </div>
+            <div className="field">
+              <label>Meta Description (leave blank to use the excerpt)</label>
+              <textarea value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} maxLength={170} />
+            </div>
           </div>
 
           <div className="form-row">
@@ -195,6 +214,8 @@ export default function AdminArticles() {
             {saving ? 'Saving…' : form.id ? 'Update Article' : 'Publish Article'}
           </button>
         </form>
+
+        <SEOPanel article={form} />
 
         <div className="slide-list">
           {articles.length === 0 && <p style={{ color: 'var(--text-faint)', fontSize: 13.5 }}>No articles yet — write your first one.</p>}

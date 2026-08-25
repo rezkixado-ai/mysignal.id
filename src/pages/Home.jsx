@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import HeroSlider from '../components/HeroSlider.jsx';
 import { getGallery, getArticles } from '../lib/api.js';
+import { useSEO } from '../lib/useSEO.js';
 
 const SPAN_CLASS = { big: 'g1', wide: 'g2', normal: 'g3' };
 
@@ -31,6 +32,11 @@ export default function Home() {
   }, []);
 
   const dateFmt = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  useSEO({
+    description: 'MySignal covers cybersecurity, cloud, network, fiber optic, AI and big tech — signals from the digital world, decoded for everyone.',
+    path: '/'
+  });
 
   return (
     <main>
