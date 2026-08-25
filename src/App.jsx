@@ -2,12 +2,15 @@ import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import Home from './pages/Home.jsx';
+import News from './pages/News.jsx';
+import ArticleDetail from './pages/ArticleDetail.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminHeroSlides from './pages/admin/AdminHeroSlides.jsx';
 import AdminGallery from './pages/admin/AdminGallery.jsx';
+import AdminArticles from './pages/admin/AdminArticles.jsx';
 
 function PublicSite() {
   return (
@@ -17,9 +20,9 @@ function PublicSite() {
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<Placeholder title="About MySignal" />} />
         <Route path="/gallery" element={<Placeholder title="Gallery" />} />
-        <Route path="/news" element={<Placeholder title="News" />} />
+        <Route path="/news" element={<News />} />
         <Route path="/contact" element={<Placeholder title="Contact Us" />} />
-        <Route path="/article/:slug" element={<Placeholder title="Article" />} />
+        <Route path="/article/:slug" element={<ArticleDetail />} />
       </Routes>
       <Footer />
     </>
@@ -34,6 +37,7 @@ export default function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="hero-slides" element={<AdminHeroSlides />} />
         <Route path="gallery" element={<AdminGallery />} />
+        <Route path="articles" element={<AdminArticles />} />
       </Route>
       <Route path="/*" element={<PublicSite />} />
     </Routes>

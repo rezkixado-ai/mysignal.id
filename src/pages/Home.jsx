@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import HeroSlider from '../components/HeroSlider.jsx';
-import { getGallery } from '../lib/api.js';
+import { getGallery, getArticles } from '../lib/api.js';
 
 const SPAN_CLASS = { big: 'g1', wide: 'g2', normal: 'g3' };
 
@@ -18,11 +18,19 @@ const TOPICS = [
 const SOURCES = ['Reuters', 'WIRED', 'The Verge', 'Cisco', 'AWS', 'Google', 'Microsoft', 'IBM', 'Cloudflare'];
 
 export default function Home() {
-  const [gallery, setGallery] = useState(null); // null = loading, [] = empty, [...] = loaded
+  const [gallery, setGallery] = useState(null);
+  const [news, setNews] = useState(null);       // latest 'news' type articles
+  const [deeper, setDeeper] = useState(null);    // analysis/explainer/insight/opinion articles
 
   useEffect(() => {
     getGallery().then(setGallery).catch(() => setGallery([]));
+    getArticles({ limit: '20' }).then((all) => {
+      setNews(all.filter((a) => a.article_type === 'news').slice(0, 4));
+      setDeeper(all.filter((a) => a.article_type !== 'news').slice(0, 3));
+    }).catch(() => { setNews([]); setDeeper([]); });
   }, []);
+
+  const dateFmt = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <main>
@@ -97,29 +105,59 @@ export default function Home() {
             </a>
           </div>
           <div className="news-grid">
-            <a href="/news" className="news-feature">
-              <img src="https://picsum.photos/seed/mysignal-news1/800/700" alt="Circuit board with a lock icon" loading="lazy" />
-              <div className="nf-content">
-                <span className="eyebrow"><span className="live-dot" /> Cybersecurity</span>
-                <h3>Critical Vulnerability Found in Popular Software</h3>
-                <p>Millions of users are at risk. Here's what you need to know to protect yourself right now.</p>
-                <div className="meta-row"><span>25 Aug 2026</span><span>·</span><span>5 min read</span></div>
-              </div>
-            </a>
-            <div className="news-side">
-              <a href="/news" className="news-card">
-                <div className="thumb"><img src="https://picsum.photos/seed/mysignal-news2/200/200" alt="Clouds in the sky" loading="lazy" /></div>
-                <div><span className="cat">Cloud</span><h4>AWS Outage: What Really Happened?</h4><div className="meta-row"><span>24 Aug 2026</span><span>·</span><span>4 min read</span></div></div>
-              </a>
-              <a href="/news" className="news-card">
-                <div className="thumb"><img src="https://picsum.photos/seed/mysignal-news3/200/200" alt="Undersea fiber optic cable" loading="lazy" /></div>
-                <div><span className="cat">Network</span><h4>Under the Sea: The World's Internet Backbone</h4><div className="meta-row"><span>23 Aug 2026</span><span>·</span><span>6 min read</span></div></div>
-              </a>
-              <a href="/news" className="news-card">
-                <div className="thumb"><img src="https://picsum.photos/seed/mysignal-news4/200/200" alt="Google office building" loading="lazy" /></div>
-                <div><span className="cat">Big Tech</span><h4>Google's New Move in the AI Race</h4><div className="meta-row"><span>22 Aug 2026</span><span>·</span><span>4 min read</span></div></div>
-              </a>
-            </div>
+            {news && news.length > 0 ? (
+              <>
+                <a href={`/article/${news[0].slug}`} className="news-feature">
+                  {news[0].cover_media_type === 'video'
+                    ? <video src={news[0].cover_media_url} muted loop autoPlay playsInline />
+                    : <img src={news[0].cover_media_url} alt={news[0].title} loading="lazy" />}
+                  <div className="nf-content">
+                    <span className="eyebrow"><span className="live-dot" /> {news[0].category}</span>
+                    <h3>{news[0].title}</h3>
+                    {news[0].excerpt && <p>{news[0].excerpt}</p>}
+                    <div className="meta-row"><span>{dateFmt(news[0].published_at)}</span><span>·</span><span>{news[0].read_minutes} min read</span></div>
+                  </div>
+                </a>
+                <div className="news-side">
+                  {news.slice(1, 4).map((a) => (
+                    <a href={`/article/${a.slug}`} className="news-card" key={a.id}>
+                      <div className="thumb">
+                        {a.cover_media_type === 'video'
+                          ? <video src={a.cover_media_url} muted />
+                          : <img src={a.cover_media_url} alt={a.title} loading="lazy" />}
+                      </div>
+                      <div><span className="cat">{a.category}</span><h4>{a.title}</h4><div className="meta-row"><span>{dateFmt(a.published_at)}</span><span>·</span><span>{a.read_minutes} min read</span></div></div>
+                    </a>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <a href="/news" className="news-feature">
+                  <img src="https://picsum.photos/seed/mysignal-news1/800/700" alt="Circuit board with a lock icon" loading="lazy" />
+                  <div className="nf-content">
+                    <span className="eyebrow"><span className="live-dot" /> Cybersecurity</span>
+                    <h3>Critical Vulnerability Found in Popular Software</h3>
+                    <p>Millions of users are at risk. Here's what you need to know to protect yourself right now.</p>
+                    <div className="meta-row"><span>25 Aug 2026</span><span>·</span><span>5 min read</span></div>
+                  </div>
+                </a>
+                <div className="news-side">
+                  <a href="/news" className="news-card">
+                    <div className="thumb"><img src="https://picsum.photos/seed/mysignal-news2/200/200" alt="Clouds in the sky" loading="lazy" /></div>
+                    <div><span className="cat">Cloud</span><h4>AWS Outage: What Really Happened?</h4><div className="meta-row"><span>24 Aug 2026</span><span>·</span><span>4 min read</span></div></div>
+                  </a>
+                  <a href="/news" className="news-card">
+                    <div className="thumb"><img src="https://picsum.photos/seed/mysignal-news3/200/200" alt="Undersea fiber optic cable" loading="lazy" /></div>
+                    <div><span className="cat">Network</span><h4>Under the Sea: The World's Internet Backbone</h4><div className="meta-row"><span>23 Aug 2026</span><span>·</span><span>6 min read</span></div></div>
+                  </a>
+                  <a href="/news" className="news-card">
+                    <div className="thumb"><img src="https://picsum.photos/seed/mysignal-news4/200/200" alt="Google office building" loading="lazy" /></div>
+                    <div><span className="cat">Big Tech</span><h4>Google's New Move in the AI Race</h4><div className="meta-row"><span>22 Aug 2026</span><span>·</span><span>4 min read</span></div></div>
+                  </a>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -160,23 +198,43 @@ export default function Home() {
             </a>
           </div>
           <div className="articles-grid">
-            <a href="/news" className="article-card featured">
-              <div className="article-thumb"><img src="https://picsum.photos/seed/mysignal-art1/700/560" alt="Clouds representing cloud infrastructure" loading="lazy" /></div>
-              <div className="article-body">
-                <span className="eyebrow">Analysis</span>
-                <h3>Why Cloud Infrastructure Is Becoming a Strategic Asset</h3>
-                <p>Cloud is no longer just IT — it's the foundation of modern business and innovation.</p>
-                <div className="meta-row"><span>24 Aug 2026</span><span>·</span><span>8 min read</span></div>
-              </div>
-            </a>
-            <a href="/news" className="article-card">
-              <div className="article-thumb"><img src="https://picsum.photos/seed/mysignal-art2/500/320" alt="Circuit board with padlock" loading="lazy" /></div>
-              <div className="article-body"><span className="eyebrow">Explainer</span><h3>Zero-Day Attack: How It Works and How to Prevent It</h3><div className="meta-row"><span>23 Aug 2026</span><span>·</span><span>7 min read</span></div></div>
-            </a>
-            <a href="/news" className="article-card">
-              <div className="article-thumb"><img src="https://picsum.photos/seed/mysignal-art3/500/320" alt="City skyline" loading="lazy" /></div>
-              <div className="article-body"><span className="eyebrow">Insight</span><h3>5G, 6G, and Beyond: What's Next for Mobile Networks?</h3><div className="meta-row"><span>22 Aug 2026</span><span>·</span><span>6 min read</span></div></div>
-            </a>
+            {deeper && deeper.length > 0 ? (
+              deeper.map((a, i) => (
+                <a href={`/article/${a.slug}`} className={`article-card${i === 0 ? ' featured' : ''}`} key={a.id}>
+                  <div className="article-thumb">
+                    {a.cover_media_type === 'video'
+                      ? <video src={a.cover_media_url} muted loop autoPlay playsInline />
+                      : <img src={a.cover_media_url} alt={a.title} loading="lazy" />}
+                  </div>
+                  <div className="article-body">
+                    <span className="eyebrow">{a.article_type}</span>
+                    <h3>{a.title}</h3>
+                    {i === 0 && a.excerpt && <p>{a.excerpt}</p>}
+                    <div className="meta-row"><span>{dateFmt(a.published_at)}</span><span>·</span><span>{a.read_minutes} min read</span></div>
+                  </div>
+                </a>
+              ))
+            ) : (
+              <>
+                <a href="/news" className="article-card featured">
+                  <div className="article-thumb"><img src="https://picsum.photos/seed/mysignal-art1/700/560" alt="Clouds representing cloud infrastructure" loading="lazy" /></div>
+                  <div className="article-body">
+                    <span className="eyebrow">Analysis</span>
+                    <h3>Why Cloud Infrastructure Is Becoming a Strategic Asset</h3>
+                    <p>Cloud is no longer just IT — it's the foundation of modern business and innovation.</p>
+                    <div className="meta-row"><span>24 Aug 2026</span><span>·</span><span>8 min read</span></div>
+                  </div>
+                </a>
+                <a href="/news" className="article-card">
+                  <div className="article-thumb"><img src="https://picsum.photos/seed/mysignal-art2/500/320" alt="Circuit board with padlock" loading="lazy" /></div>
+                  <div className="article-body"><span className="eyebrow">Explainer</span><h3>Zero-Day Attack: How It Works and How to Prevent It</h3><div className="meta-row"><span>23 Aug 2026</span><span>·</span><span>7 min read</span></div></div>
+                </a>
+                <a href="/news" className="article-card">
+                  <div className="article-thumb"><img src="https://picsum.photos/seed/mysignal-art3/500/320" alt="City skyline" loading="lazy" /></div>
+                  <div className="article-body"><span className="eyebrow">Insight</span><h3>5G, 6G, and Beyond: What's Next for Mobile Networks?</h3><div className="meta-row"><span>22 Aug 2026</span><span>·</span><span>6 min read</span></div></div>
+                </a>
+              </>
+            )}
           </div>
         </div>
       </section>

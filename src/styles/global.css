@@ -205,3 +205,12 @@ header.site-header.scrolled{border-bottom-color:var(--border);}
 .cta-form{display:flex; gap:10px; flex-wrap:wrap;}
 .cta-form input{background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:13px 16px; border-radius:999px; font-size:14px; width:250px; max-width:60vw;}
 .cta-form input::placeholder{color:var(--text-faint);}
+
+/* ============ Article prose (rich text body) ============ */
+.article-prose h2{font-size:22px; margin:28px 0 12px; color:var(--text);}
+.article-prose h3{font-size:18px; margin:22px 0 10px; color:var(--text);}
+.article-prose p{margin-bottom:16px;}
+.article-prose ul, .article-prose ol{margin:0 0 16px 22px;}
+.article-prose li{margin-bottom:6px;}
+.article-prose a{color:var(--blue-2); text-decoration:underline;}
+.article-prose strong{color:var(--text); font-weight:700;}
