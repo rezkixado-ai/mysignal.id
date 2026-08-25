@@ -5,6 +5,11 @@
 
 [functions]
   node_bundler = "esbuild"
+  # @libsql/client ships a native per-platform binary (e.g. @libsql/linux-x64-gnu).
+  # esbuild's default bundling drops that binary, crashing every function that
+  # imports it. Marking it external tells Netlify to include it from
+  # node_modules as-is instead of bundling it.
+  external_node_modules = ["@libsql/client"]
 
 # Media upload/serve run as Edge Functions (Deno, streaming) instead of
 # regular Functions because regular Functions cap request/response bodies
