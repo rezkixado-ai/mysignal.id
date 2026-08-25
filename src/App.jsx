@@ -7,6 +7,7 @@ import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminHeroSlides from './pages/admin/AdminHeroSlides.jsx';
+import AdminGallery from './pages/admin/AdminGallery.jsx';
 
 function PublicSite() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
         <Route path="hero-slides" element={<AdminHeroSlides />} />
+        <Route path="gallery" element={<AdminGallery />} />
       </Route>
       <Route path="/*" element={<PublicSite />} />
     </Routes>

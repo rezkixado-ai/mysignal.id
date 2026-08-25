@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 const CARDS = [
   { to: '/admin/hero-slides', title: 'Hero Slider', desc: 'Upload images or video for the homepage hero, set Ken Burns transitions and slide copy.' },
   { to: '/admin/articles', title: 'Articles', desc: 'Write new Latest Signals / Deeper Signals with embedded images and video.', soon: true },
-  { to: '/admin/gallery', title: 'Gallery', desc: 'Manage the Signal Gallery masonry grid.', soon: true },
+  { to: '/admin/gallery', title: 'Gallery', desc: 'Upload images or video, and pick each card\'s shape (Normal / Wide / Big) for the Signal Gallery masonry grid.' },
   { to: '/admin/news', title: 'News', desc: 'Curate the News page feed.', soon: true }
 ];
 

@@ -16,7 +16,7 @@ const KEN_BURNS_STYLES = `
 .hs-slide.active{ opacity:1; visibility:visible; }
 .hs-media{ position:absolute; inset:0; overflow:hidden; background:#000; }
 .hs-media .hs-media-inner{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-.hs-slide.active .hs-media .hs-media-inner.kb{ animation-duration:9s; animation-timing-function:ease-out; animation-fill-mode:forwards; }
+.hs-media .hs-media-inner.kb{ animation-duration:9s; animation-timing-function:ease-out; animation-fill-mode:forwards; }
 .hs-media::after{
   content:""; position:absolute; inset:0;
   background:
@@ -46,14 +46,19 @@ const KEN_BURNS_STYLES = `
 
 const KB_ANIM = { 'zoom-in': 'kb-zoom-in', 'zoom-out': 'kb-zoom-out', 'pan-left': 'kb-pan-left', 'pan-right': 'kb-pan-right', none: 'none' };
 
-function SlideMedia({ slide, active }) {
+function SlideMedia({ slide, active, restartKey }) {
   const kbAnim = KB_ANIM[slide.ken_burns] || KB_ANIM['zoom-in'];
-  const style = kbAnim !== 'none' ? { animationName: kbAnim } : {};
-  const cls = `hs-media-inner${kbAnim !== 'none' ? ' kb' : ''}`;
+  const style = active && kbAnim !== 'none' ? { animationName: kbAnim } : {};
+  const cls = `hs-media-inner${active && kbAnim !== 'none' ? ' kb' : ''}`;
+  // key forces a fresh DOM node each time this slide becomes active again,
+  // otherwise the browser treats it as the same running animation and won't
+  // restart it from 0% — it just looked "stuck" at the end frame.
+  const key = `${slide.id}-${restartKey}`;
 
   if (slide.media_type === 'video') {
     return (
       <video
+        key={key}
         className={cls}
         style={style}
         src={slide.media_url}
@@ -63,7 +68,7 @@ function SlideMedia({ slide, active }) {
       />
     );
   }
-  return <img className={cls} style={style} src={slide.media_url} alt={slide.title} loading={active ? 'eager' : 'lazy'} />;
+  return <img key={key} className={cls} style={style} src={slide.media_url} alt={slide.title} loading={active ? 'eager' : 'lazy'} />;
 }
 
 export default function HeroSlider() {
@@ -94,7 +99,7 @@ export default function HeroSlider() {
         {slides.map((s, i) => (
           <article className={`hs-slide${i === current ? ' active' : ''}`} key={s.id}>
             <div className="hs-media">
-              <SlideMedia slide={s} active={i === current} />
+              <SlideMedia slide={s} active={i === current} restartKey={current} />
             </div>
             <div className="wrap" style={{ position: 'relative', height: '100%' }}>
               <span className="hs-tag"><span className="hs-live" /> Signal {String(i + 1).padStart(2, '0')}</span>

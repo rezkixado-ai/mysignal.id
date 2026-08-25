@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react';
 import HeroSlider from '../components/HeroSlider.jsx';
+import { getGallery } from '../lib/api.js';
+
+const SPAN_CLASS = { big: 'g1', wide: 'g2', normal: 'g3' };
 
 const TOPICS = [
   { c: '#3d7bfb', title: 'Cybersecurity', desc: 'Protecting the digital world from threats', icon: 'M12 3l7 3v6c0 5-3.5 7.5-7 9-3.5-1.5-7-4-7-9V6z' },
@@ -14,6 +18,12 @@ const TOPICS = [
 const SOURCES = ['Reuters', 'WIRED', 'The Verge', 'Cisco', 'AWS', 'Google', 'Microsoft', 'IBM', 'Cloudflare'];
 
 export default function Home() {
+  const [gallery, setGallery] = useState(null); // null = loading, [] = empty, [...] = loaded
+
+  useEffect(() => {
+    getGallery().then(setGallery).catch(() => setGallery([]));
+  }, []);
+
   return (
     <main>
       <HeroSlider />
@@ -54,12 +64,25 @@ export default function Home() {
             </a>
           </div>
           <div className="gallery-grid">
-            <a href="/gallery" className="g1"><img src="https://picsum.photos/seed/mysignal-g1/700/700" alt="Server room corridor" loading="lazy" /><span className="g-tag">Infrastructure</span></a>
-            <a href="/gallery" className="g2"><img src="https://picsum.photos/seed/mysignal-g2/700/350" alt="Fiber optic light streaks" loading="lazy" /><span className="g-tag">Fiber Optic</span></a>
-            <a href="/gallery" className="g3"><img src="https://picsum.photos/seed/mysignal-g3/350/350" alt="Cloud computing illustration" loading="lazy" /><span className="g-tag">Cloud</span></a>
-            <a href="/gallery" className="g4"><img src="https://picsum.photos/seed/mysignal-g4/350/350" alt="Satellite dishes at dusk" loading="lazy" /><span className="g-tag">Network</span></a>
-            <a href="/gallery" className="g5"><img src="https://picsum.photos/seed/mysignal-g5/700/350" alt="AI chip illustration" loading="lazy" /><span className="g-tag">AI</span></a>
-            <a href="/gallery" className="g3"><img src="https://picsum.photos/seed/mysignal-g6/350/350" alt="Analyst monitoring screens" loading="lazy" /><span className="g-tag">Cybersecurity</span></a>
+            {gallery && gallery.length > 0 ? (
+              gallery.slice(0, 6).map((it) => (
+                <a href="/gallery" className={SPAN_CLASS[it.layout_span] || 'g3'} key={it.id}>
+                  {it.media_type === 'video'
+                    ? <video src={it.media_url} muted loop autoPlay playsInline />
+                    : <img src={it.media_url} alt={it.title || it.tag || 'Gallery item'} loading="lazy" />}
+                  {it.tag && <span className="g-tag">{it.tag}</span>}
+                </a>
+              ))
+            ) : (
+              <>
+                <a href="/gallery" className="g1"><img src="https://picsum.photos/seed/mysignal-g1/700/700" alt="Server room corridor" loading="lazy" /><span className="g-tag">Infrastructure</span></a>
+                <a href="/gallery" className="g2"><img src="https://picsum.photos/seed/mysignal-g2/700/350" alt="Fiber optic light streaks" loading="lazy" /><span className="g-tag">Fiber Optic</span></a>
+                <a href="/gallery" className="g3"><img src="https://picsum.photos/seed/mysignal-g3/350/350" alt="Cloud computing illustration" loading="lazy" /><span className="g-tag">Cloud</span></a>
+                <a href="/gallery" className="g4"><img src="https://picsum.photos/seed/mysignal-g4/350/350" alt="Satellite dishes at dusk" loading="lazy" /><span className="g-tag">Network</span></a>
+                <a href="/gallery" className="g5"><img src="https://picsum.photos/seed/mysignal-g5/700/350" alt="AI chip illustration" loading="lazy" /><span className="g-tag">AI</span></a>
+                <a href="/gallery" className="g3"><img src="https://picsum.photos/seed/mysignal-g6/350/350" alt="Analyst monitoring screens" loading="lazy" /><span className="g-tag">Cybersecurity</span></a>
+              </>
+            )}
           </div>
         </div>
       </section>
