@@ -1,20 +1,12 @@
-[build]
-  command = "npm run build"
-  publish = "dist"
-  functions = "netlify/functions"
-
-[functions]
-  node_bundler = "esbuild"
-  # @libsql/client ships a native per-platform binary (e.g. @libsql/linux-x64-gnu).
-  # esbuild's default bundling drops that binary, crashing every function that
-  # imports it. Marking it external tells Netlify to include it from
-  # node_modules as-is instead of bundling it.
-  external_node_modules = ["@libsql/client"]
+# Build command/publish directory are auto-detected by Netlify's Next.js
+# Runtime (@netlify/plugin-nextjs) - intentionally not set here.
 
 # Media upload/serve run as Edge Functions (Deno, streaming) instead of
-# regular Functions because regular Functions cap request/response bodies
-# around 6MB — too small for video. Edge Functions stream instead of
-# buffering the whole file, so large video uploads work reliably.
+# through Next.js API routes. Netlify's Next.js "edge runtime" actually
+# executes in the regular Node function infra under the hood, not true
+# streaming Edge Functions, so it would reintroduce the 6MB body limit
+# that broke video uploads earlier in this project. Real Netlify Edge
+# Functions genuinely stream and have no such limit.
 [[edge_functions]]
   path = "/api/media-upload"
   function = "media-upload"
@@ -22,27 +14,3 @@
 [[edge_functions]]
   path = "/api/media-serve"
   function = "media-serve"
-
-# API routes -> functions
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# SEO: dynamic sitemap + robots (generated from the live database, so they
-# never go stale as content is published)
-[[redirects]]
-  from = "/sitemap.xml"
-  to = "/.netlify/functions/sitemap"
-  status = 200
-
-[[redirects]]
-  from = "/robots.txt"
-  to = "/.netlify/functions/robots"
-  status = 200
-
-# SPA fallback (must be last)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

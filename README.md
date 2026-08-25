@@ -1,136 +1,85 @@
 # MySignal CMS
 
-Vite + React frontend, Netlify Functions + Edge Functions backend, Turso
-(libSQL) database, Netlify Blobs for uploaded media. No separate backend
-server, no local dev step required — everything builds and runs on Netlify.
+**Next.js (App Router)** + Turso (libSQL) + Netlify Blobs for media. Deployed
+on Netlify via its official Next.js Runtime (auto-detected, zero-config).
 
-## Why Edge Functions for media
+## Why Next.js (migrated from a Vite/React SPA)
 
-Regular Netlify Functions (the ones handling auth/articles/hero-slides CRUD)
-cap request/response bodies around 6MB. That's exactly what breaks video
-uploads. `media-upload` and `media-serve` run as **Edge Functions** instead
-(`netlify/edge-functions/`) — they stream the file instead of buffering it
-whole, so uploads work reliably up to 100MB without any local workaround.
+The previous version was a client-rendered SPA: every page shared the same
+`<title>`/meta tags, and crawlers/link previews that don't execute
+JavaScript saw nothing useful. Next.js Server Components render real HTML
+per page on the server — `generateMetadata` gives every article its own
+title, description, Open Graph image, and JSON-LD, already in the initial
+response. That's the actual SEO fix; everything else (sitemap, robots,
+the Yoast-style analyzer) was already in place before this migration.
+
+## Why media upload/serve are still separate Netlify Edge Functions
+
+Regular server functions (including Next.js API/Route Handlers, once
+deployed through Netlify's Next.js Runtime) cap request/response bodies
+around 6MB — too small for video, and the exact bug that broke video
+uploads earlier in this project. `netlify/edge-functions/media-upload.js`
+and `media-serve.js` are genuine Netlify Edge Functions (Deno, streaming),
+deliberately kept outside the Next.js app so that fix doesn't get undone.
+Next.js's own "edge runtime" on Netlify does **not** give the same
+guarantee — per Netlify's docs it still executes through the regular
+function infrastructure under the hood.
 
 ## Deploy straight from GitHub (recommended — no local setup needed)
 
-1. **Push this folder to a new GitHub repo:**
+1. **Push this folder to your GitHub repo** (same repo as before is fine —
+   this replaces the old Vite app entirely):
    ```bash
    cd mysignal-cms
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/<your-username>/mysignal-cms.git
-   git push -u origin main
+   git add -A
+   git commit -m "Migrate to Next.js"
+   git push
    ```
-2. **Create the Turso database** (needs the Turso CLI or their web dashboard):
-   ```bash
-   turso db create mysignal-content
-   turso db show mysignal-content --url
-   turso db tokens create mysignal-content
-   turso db shell mysignal-content < db/schema.sql
-   turso db shell mysignal-content < db/seed.sql   # optional starter hero slides
-   ```
-   No Turso CLI handy? Paste the contents of `db/schema.sql` (then
-   `db/seed.sql`) into the **Edit Data → SQL Console** on the Turso web
-   dashboard instead — same as before.
-3. **In Netlify:** "Add new site" → "Import an existing project" → pick this
-   GitHub repo. Build command and publish directory are already set in
-   `netlify.toml`, so just deploy.
-4. **Set 4 environment variables** in Netlify (Site settings → Environment
-   variables) — take these straight from `.env.example`:
-   - `TURSO_DATABASE_URL`
-   - `TURSO_AUTH_TOKEN`
-   - `ADMIN_PASSWORD` — your `/admin` login password
-   - `ADMIN_SESSION_SECRET` — any random long string
-   Netlify Blobs needs no extra keys — it's automatic once the site exists.
-5. **Redeploy** (Netlify → Deploys → Trigger deploy) after adding the env
-   vars so the functions pick them up. Then visit `https://<your-site>.netlify.app/admin/login`.
+   Netlify auto-detects Next.js and rebuilds — no `netlify.toml` build
+   command needed, it's handled by the Next.js Runtime plugin.
 
-Every future change: `git push`, Netlify rebuilds automatically. No local
-`npm install` or `netlify dev` required at any point.
+2. **Database migration** (if you haven't already run the SEO fields
+   migration from before): in the Turso SQL Console, run
+   `db/migrations/002_add_seo_fields.sql`. Everything else in the schema is
+   unchanged — same database, same data, no re-seeding needed.
 
-## Optional: running it locally anyway
+3. **Environment variables** — same 4 as before, already set in Netlify if
+   you did the earlier setup: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`,
+   `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`. Nothing new to add.
+
+4. **Trigger a redeploy** after pushing if it doesn't fire automatically,
+   then visit `/admin/login`.
+
+## Local development (optional)
 
 ```bash
 npm install
-npx netlify login  # opens a browser to authenticate, one-time
-npx netlify link   # links this folder to your Netlify site (needed for local Blobs access)
-npm run dev         # runs Vite + Functions + Edge Functions together
+npm run dev
 ```
-`npx` is required for `login` and `link` since the Netlify CLI is only
-installed locally (not globally) — without it your terminal won't know
-where to find the `netlify` command. `npm run dev` doesn't need `npx`
-because npm already resolves it from `node_modules` automatically.
+Visit `http://localhost:3000`. Note: local dev won't have working media
+upload/serve, since those are genuine Netlify Edge Functions — use
+`npx netlify dev` instead if you need to test uploads locally (requires
+`npx netlify link` first, same as before).
 
-Visit `http://localhost:8888/admin/login`. This is optional — everything
-above already works from a straight GitHub deploy.
+## What's built
 
-## SEO
+- **Public site** (Server Components, real per-page SEO): Home, News
+  (with client-side category filter), Article detail (`generateMetadata`
+  + `Article` JSON-LD), Gallery/About/Contact (placeholders).
+- **Admin** (`/admin`, password-protected): Hero Slider (image/video
+  upload, Ken Burns transitions), Gallery (per-card shape), Articles
+  (rich text body, embedded media, SEO fields + live Yoast-style analyzer).
+- **SEO**: `app/sitemap.js` and `app/robots.js` (native Next.js
+  conventions, generated from the live database), per-page metadata,
+  per-article Open Graph + JSON-LD.
 
-This is a React SPA — Google can index it (it executes JS), but slower and
-less reliably than a server-rendered site, and non-JS consumers (link
-previews on WhatsApp/Twitter/Facebook, some crawlers) won't see per-page
-content at all without help. What's implemented to compensate:
+Before submitting to Google Search Console, update the placeholder
+`https://mysignal.id` in `app/layout.jsx`, `app/(site)/page.jsx` (canonical),
+`app/sitemap.js`, `app/robots.js`, and `app/(site)/article/[slug]/page.jsx`
+(JSON-LD `mainEntityOfPage`) to your real domain.
 
-- **Per-page meta/OG/canonical/JSON-LD** — `src/lib/useSEO.js` sets
-  `document.title`, meta description, Open Graph, Twitter Card, and (on
-  article pages) `Article` JSON-LD structured data client-side per route.
-  This is what Google's JS-rendering pass sees; it does **not** fix social
-  link previews, since those bots don't run JS.
-- **SEO fields per article** — `meta_title`, `meta_description`,
-  `focus_keyword` (Admin → Articles), with a live Yoast-style analysis panel
-  (title/description length, focus keyword placement and density, content
-  length, subheadings, cover image, slug) scoring 0–100.
-- **Dynamic `/sitemap.xml` and `/robots.txt`** — generated by Netlify
-  Functions (`netlify/functions/sitemap.js`, `robots.js`) from the live
-  database, so the sitemap always reflects currently published articles.
-  `/admin/` is disallowed in robots.txt.
+## Next steps
 
-If you add real content and traffic matters, the next real upgrade is
-migrating to a framework with server-side rendering or static generation
-(e.g. Next.js, Astro) so crawlers and link previews get fully-formed HTML
-immediately — a separate, larger project from this CMS.
-
-### Database migration required
-
-If your Turso database was created before this update, run this once in
-the Turso SQL Console (or `turso db shell`) — it only adds columns:
-```sql
-ALTER TABLE articles ADD COLUMN meta_title TEXT;
-ALTER TABLE articles ADD COLUMN meta_description TEXT;
-ALTER TABLE articles ADD COLUMN focus_keyword TEXT;
-```
-(Same as `db/migrations/002_add_seo_fields.sql`.)
-
-### Before submitting to Google Search Console
-
-1. Update `SITE_URL` in `src/lib/useSEO.js` and `netlify/functions/sitemap.js`
-   to your real domain (currently placeholder `https://mysignal.id`).
-2. Deploy, then check `https://<your-domain>/sitemap.xml` and
-   `https://<your-domain>/robots.txt` both load correctly.
-3. In [Search Console](https://search.google.com/search-console), add your
-   property (domain or URL-prefix — URL-prefix is simpler if you don't
-   control DNS), verify ownership (HTML tag method is easiest — Netlify
-   serves whatever you put in `index.html`'s `<head>`), then submit
-   `sitemap.xml` under **Sitemaps**.
-4. Use **URL Inspection** on your homepage and a couple of article URLs to
-   request indexing directly rather than waiting for the crawl.
-
-## What's built so far (Phase 1–3)
-
-- Public homepage with a CMS-driven **Hero Slider**: upload image or video,
-  pick a Ken Burns transition (zoom in/out, pan left/right, or none), set
-  copy, CTA, order and published/draft status — all from `/admin/hero-slides`.
-- Admin auth (password + signed session cookie), matching the pattern used
-  in `falcomadsv1`.
-- Database schema and CRUD APIs already in place for **Articles** and
-  **Gallery** (`netlify/functions/articles.js`, `gallery.js`) — ready for
-  their admin screens and public pages next phase.
-
-## Next phases
-
-1. Admin screens for Articles (rich text + embedded image/video) and Gallery.
-2. Public Gallery, News, and Article-detail pages reading from the CMS.
-3. News page + "Signal Sources" admin.
+Full Gallery and About/Contact pages (currently placeholders), and an
+Admin screen for the "Signal Sources" marquee and topic cards if you want
+those editable too.
