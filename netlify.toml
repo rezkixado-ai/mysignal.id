@@ -1,0 +1,31 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Media upload/serve run as Edge Functions (Deno, streaming) instead of
+# regular Functions because regular Functions cap request/response bodies
+# around 6MB — too small for video. Edge Functions stream instead of
+# buffering the whole file, so large video uploads work reliably.
+[[edge_functions]]
+  path = "/api/media-upload"
+  function = "media-upload"
+
+[[edge_functions]]
+  path = "/api/media-serve"
+  function = "media-serve"
+
+# API routes -> functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback (must be last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
