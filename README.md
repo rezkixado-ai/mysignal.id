@@ -55,9 +55,15 @@ Every future change: `git push`, Netlify rebuilds automatically. No local
 
 ```bash
 npm install
-netlify link       # only needed once, for local Netlify Blobs access
-netlify dev         # runs Vite + Functions + Edge Functions together
+npx netlify login  # opens a browser to authenticate, one-time
+npx netlify link   # links this folder to your Netlify site (needed for local Blobs access)
+npm run dev         # runs Vite + Functions + Edge Functions together
 ```
+`npx` is required for `login` and `link` since the Netlify CLI is only
+installed locally (not globally) — without it your terminal won't know
+where to find the `netlify` command. `npm run dev` doesn't need `npx`
+because npm already resolves it from `node_modules` automatically.
+
 Visit `http://localhost:8888/admin/login`. This is optional — everything
 above already works from a straight GitHub deploy.
 
