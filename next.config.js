@@ -10,6 +10,19 @@ const nextConfig = {
   // require at runtime instead, preserving the native binary.
   experimental: {
     serverComponentsExternalPackages: ['@libsql/client']
+  },
+  // Belt-and-suspenders against stale CDN/edge caching of admin-editable
+  // content: `export const dynamic = 'force-dynamic'` on these pages should
+  // already prevent caching, but explicit headers make sure no intermediate
+  // cache (Netlify's CDN included) serves an old snapshot after an edit.
+  async headers() {
+    const noStore = [{ key: 'Cache-Control', value: 'no-store, must-revalidate' }];
+    return [
+      { source: '/', headers: noStore },
+      { source: '/news', headers: noStore },
+      { source: '/article/:slug*', headers: noStore },
+      { source: '/api/:path*', headers: noStore }
+    ];
   }
 };
 
