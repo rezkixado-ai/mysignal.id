@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, newId } from '../../../lib/db.js';
 import { isAuthorized } from '../../../lib/auth.js';
+import { pingIndexNow } from '../../../lib/indexnow.js';
 
 function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -61,6 +62,9 @@ export async function POST(request) {
       });
     }
   }
+  if (b.is_published) {
+    pingIndexNow([`/article/${slug}`, '/news', '/']);
+  }
   return NextResponse.json({ ok: true, id, slug });
 }
 
@@ -92,6 +96,9 @@ export async function PUT(request) {
         args: [newId('med'), b.id, m.media_type || 'image', m.media_url, m.caption || '', i]
       });
     }
+  }
+  if (b.is_published && b.slug) {
+    pingIndexNow([`/article/${b.slug}`, '/news', '/']);
   }
   return NextResponse.json({ ok: true });
 }
