@@ -71,8 +71,14 @@ function SlideMedia({ slide, active, restartKey }) {
 
 export default function HeroSlider({ slides }) {
   const [current, setCurrent] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false); // always false on server + first client render
   const timer = useRef(null);
-  const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  useEffect(() => {
+    // Safe to touch `window` here — this runs only after hydration completes,
+    // so it can never cause a server/client render mismatch.
+    setReduceMotion(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
+  }, []);
 
   useEffect(() => {
     if (reduceMotion || slides.length < 2) return;
