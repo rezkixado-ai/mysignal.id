@@ -30,7 +30,7 @@ const dateFmt = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric',
 async function getHomeData() {
   const [heroRes, galleryRes, articlesRes] = await Promise.all([
     db().execute("SELECT * FROM hero_slides WHERE is_published = 1 ORDER BY sort_order ASC"),
-    db().execute("SELECT * FROM gallery_items WHERE is_published = 1 ORDER BY sort_order ASC LIMIT 4"),
+    db().execute("SELECT * FROM gallery_items WHERE is_published = 1 ORDER BY sort_order ASC LIMIT 6"),
     db().execute("SELECT * FROM articles WHERE is_published = 1 ORDER BY published_at DESC LIMIT 20")
   ]);
   const all = articlesRes.rows;
