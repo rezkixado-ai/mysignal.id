@@ -14,3 +14,28 @@
 [[edge_functions]]
   path = "/api/media-serve"
   function = "media-serve"
+
+# Netlify-native cache rules for admin-editable content pages — applied at
+# Netlify's CDN/edge layer itself, ahead of and independent from whatever
+# Cache-Control the Next.js app sets. This is a second, more authoritative
+# layer against stale caching, since app-level headers in next.config.js
+# alone haven't fully prevented repeat staleness on this project.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-store, must-revalidate"
+
+[[headers]]
+  for = "/news"
+  [headers.values]
+    Cache-Control = "no-store, must-revalidate"
+
+[[headers]]
+  for = "/article/*"
+  [headers.values]
+    Cache-Control = "no-store, must-revalidate"
+
+[[headers]]
+  for = "/gallery"
+  [headers.values]
+    Cache-Control = "no-store, must-revalidate"
