@@ -58,6 +58,11 @@ function SlideMedia({ slide, active, restartKey }) {
       <video
         key={key} className={cls} style={style} src={slide.media_url}
         autoPlay muted loop playsInline disablePictureInPicture
+        // React sets `muted` as a JS property, not an HTML attribute.
+        // Firefox's autoplay policy checks the attribute specifically —
+        // without it present, Firefox silently blocks autoplay and the
+        // video just sits on a black/blank frame forever.
+        ref={(el) => { if (el) { el.muted = true; el.setAttribute('muted', ''); } }}
       />
     );
   }
