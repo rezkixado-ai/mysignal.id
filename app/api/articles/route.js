@@ -40,13 +40,18 @@ export async function POST(request) {
   const id = newId('art');
   const slug = b.slug ? slugify(b.slug) : slugify(b.title || id);
 
+  // content_blocks is the new Editor.js block-based body (JSON string).
+  // body_html is kept for backward compatibility with articles written
+  // before this feature and as a fallback if content_blocks is empty.
+  const contentBlocksJson = JSON.stringify(b.content_blocks && Array.isArray(b.content_blocks.blocks) ? b.content_blocks : { blocks: [] });
+
   await db().execute({
     sql: `INSERT INTO articles
-      (id, slug, title, excerpt, body_html, category, article_type, cover_media_type, cover_media_url,
+      (id, slug, title, excerpt, body_html, content_blocks, category, article_type, cover_media_type, cover_media_url,
        read_minutes, is_featured, is_breaking, is_published, meta_title, meta_description, focus_keyword)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     args: [
-      id, slug, b.title || 'Untitled', b.excerpt || '', b.body_html || '', b.category || 'Tech Business',
+      id, slug, b.title || 'Untitled', b.excerpt || '', b.body_html || '', contentBlocksJson, b.category || 'Tech Business',
       b.article_type || 'news', b.cover_media_type || 'image', b.cover_media_url || '',
       b.read_minutes ?? 5, b.is_featured ?? 0, b.is_breaking ?? 0, b.is_published ?? 1,
       b.meta_title || '', b.meta_description || '', b.focus_keyword || ''
@@ -73,14 +78,16 @@ export async function PUT(request) {
   const b = await request.json();
   if (!b.id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
+  const contentBlocksJson = JSON.stringify(b.content_blocks && Array.isArray(b.content_blocks.blocks) ? b.content_blocks : { blocks: [] });
+
   await db().execute({
     sql: `UPDATE articles SET
-      title=?, excerpt=?, body_html=?, category=?, article_type=?, cover_media_type=?, cover_media_url=?,
+      title=?, excerpt=?, body_html=?, content_blocks=?, category=?, article_type=?, cover_media_type=?, cover_media_url=?,
       read_minutes=?, is_featured=?, is_breaking=?, is_published=?, meta_title=?, meta_description=?,
       focus_keyword=?, updated_at=datetime('now')
       WHERE id=?`,
     args: [
-      b.title, b.excerpt || '', b.body_html || '', b.category, b.article_type || 'news',
+      b.title, b.excerpt || '', b.body_html || '', contentBlocksJson, b.category, b.article_type || 'news',
       b.cover_media_type || 'image', b.cover_media_url || '', b.read_minutes ?? 5,
       b.is_featured ?? 0, b.is_breaking ?? 0, b.is_published ?? 1,
       b.meta_title || '', b.meta_description || '', b.focus_keyword || '', b.id

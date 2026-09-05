@@ -9,11 +9,18 @@
     "start": "next start"
   },
   "dependencies": {
+    "@editorjs/editorjs": "^2.31.6",
+    "@editorjs/header": "^2.8.9",
+    "@editorjs/image": "^2.10.3",
+    "@editorjs/list": "^2.0.9",
+    "@editorjs/paragraph": "^2.11.7",
+    "@editorjs/quote": "^2.7.6",
+    "@editorjs/table": "^2.4.6",
+    "@libsql/client": "^0.9.0",
+    "@netlify/blobs": "^7.3.0",
     "next": "^14.2.5",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@libsql/client": "^0.9.0",
-    "@netlify/blobs": "^7.3.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "netlify-cli": "^17.33.0"

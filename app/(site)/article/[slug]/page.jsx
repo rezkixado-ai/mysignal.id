@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '../../../../lib/db.js';
+import { renderBlocks, getFaqJsonLd } from '../../../../lib/render-blocks.jsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,18 @@ async function getArticle(slug) {
     sql: 'SELECT * FROM article_media WHERE article_id=? ORDER BY sort_order ASC',
     args: [article.id]
   });
-  return { ...article, media: media.rows };
+
+  // content_blocks is stored as a JSON string; parse it once here so the
+  // rest of the page can just check `.blocks.length`.
+  let contentBlocks = null;
+  if (article.content_blocks) {
+    try {
+      const parsed = JSON.parse(article.content_blocks);
+      if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) contentBlocks = parsed;
+    } catch { /* fall through to legacy body_html rendering */ }
+  }
+
+  return { ...article, media: media.rows, contentBlocks };
 }
 
 export async function generateMetadata({ params }) {
@@ -59,9 +71,15 @@ export default async function ArticleDetail({ params }) {
     mainEntityOfPage: `https://mysignal.id/article/${slug}`
   };
 
+  // FAQPage JSON-LD only exists when a FAQ block was actually used.
+  const faqJsonLd = article.contentBlocks ? getFaqJsonLd(article.contentBlocks) : null;
+
   return (
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {faqJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
 
       <section style={{ paddingBottom: 24 }}>
         <div className="wrap" style={{ maxWidth: 760 }}>
@@ -90,25 +108,34 @@ export default async function ArticleDetail({ params }) {
 
       <section style={{ paddingTop: 0 }}>
         <div className="wrap" style={{ maxWidth: 760 }}>
-          <div
-            className="article-prose"
-            style={{ color: 'var(--text-dim)', fontSize: 16, lineHeight: 1.75 }}
-            dangerouslySetInnerHTML={{ __html: article.body_html || '<p>This article has no content yet.</p>' }}
-          />
-
-          {article.media && article.media.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 32 }}>
-              {article.media.map((m) => (
-                <figure key={m.id} style={{ margin: 0 }}>
-                  <div style={{ borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                    {m.media_type === 'video'
-                      ? <video src={m.media_url} controls style={{ width: '100%', display: 'block' }} />
-                      : <img src={m.media_url} alt={m.caption || ''} style={{ width: '100%', display: 'block' }} />}
-                  </div>
-                  {m.caption && <figcaption style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 8 }}>{m.caption}</figcaption>}
-                </figure>
-              ))}
+          {article.contentBlocks ? (
+            // New block-based articles: images/tables/FAQ can sit anywhere in the flow.
+            <div className="article-prose" style={{ color: 'var(--text-dim)', fontSize: 16, lineHeight: 1.75 }}>
+              {renderBlocks(article.contentBlocks)}
             </div>
+          ) : (
+            // Legacy articles: body_html blob + media appended at the end, as before.
+            <>
+              <div
+                className="article-prose"
+                style={{ color: 'var(--text-dim)', fontSize: 16, lineHeight: 1.75 }}
+                dangerouslySetInnerHTML={{ __html: article.body_html || '<p>This article has no content yet.</p>' }}
+              />
+              {article.media && article.media.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 32 }}>
+                  {article.media.map((m) => (
+                    <figure key={m.id} style={{ margin: 0 }}>
+                      <div style={{ borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        {m.media_type === 'video'
+                          ? <video src={m.media_url} controls style={{ width: '100%', display: 'block' }} />
+                          : <img src={m.media_url} alt={m.caption || ''} style={{ width: '100%', display: 'block' }} />}
+                      </div>
+                      {m.caption && <figcaption style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 8 }}>{m.caption}</figcaption>}
+                    </figure>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           <div style={{ marginTop: 40 }}>

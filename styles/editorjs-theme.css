@@ -1,0 +1,135 @@
+/* Editor.js ships with a light-theme UI (white popovers, dark text) by
+   default. It doesn't know about this site's dark theme CSS variables, and
+   the site's own text-color rules bleed into Editor.js's DOM, which is how
+   you get near-invisible light-on-light text in menus like the table's
+   row/column popover. This file forces all of Editor.js's own UI chrome
+   (not the article content itself) to a consistent dark look.
+
+   Class names below match Editor.js 2.29+ (the current "Popover" UI). If a
+   future Editor.js/plugin update renames a class and something goes
+   invisible again, right-click -> Inspect on the broken element in the
+   browser to find its new class name and add a rule for it here. */
+
+.codex-editor {
+  color: #e6e6e6;
+}
+
+/* Floating "+" add-block button and the six-dot drag handle next to each block */
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn {
+  color: #999 !important;
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+}
+.ce-toolbar__plus:hover,
+.ce-toolbar__settings-btn:hover {
+  background: #2a2a2a !important;
+  color: #fff !important;
+}
+
+/* Popover menu — the block-type picker (Tab/Enter) AND the table's
+   row/column "Add above / Add below / Delete" menu use this same component */
+.ce-popover,
+.ce-popover__container,
+.ce-popover__items {
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  color: #e6e6e6 !important;
+}
+.ce-popover-item,
+.ce-popover-item__title,
+.ce-popover-item__icon {
+  color: #e6e6e6 !important;
+}
+.ce-popover-item svg,
+.ce-popover-item__icon svg {
+  fill: #e6e6e6 !important;
+}
+.ce-popover-item:hover,
+.ce-popover-item--focused,
+.ce-popover-item--active {
+  background: #2a2a2a !important;
+}
+.ce-popover-item--disabled,
+.ce-popover-item--disabled .ce-popover-item__title,
+.ce-popover-item--confirmation .ce-popover-item__title {
+  color: #666 !important;
+}
+.ce-popover__search input {
+  background: #111 !important;
+  color: #e6e6e6 !important;
+  border-color: #333 !important;
+}
+.ce-popover-item-separator__line {
+  background: #333 !important;
+}
+
+/* Inline toolbar — the small popup for Bold/Italic/Link when selecting text */
+.ce-inline-toolbar {
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+}
+.ce-inline-tool,
+.ce-inline-toolbar__dropdown,
+.ce-inline-tool svg {
+  color: #e6e6e6 !important;
+  fill: #e6e6e6 !important;
+}
+.ce-inline-tool:hover,
+.ce-inline-toolbar__dropdown:hover {
+  background: #2a2a2a !important;
+}
+
+/* Table tool grid + its own add/delete row-column controls.
+   @editorjs/table implements its row/column context menu with its OWN
+   markup (not Editor.js's shared Popover component), all prefixed "tc-",
+   so it needs its own override rather than relying on the .ce-popover
+   rules above. */
+.tc-table {
+  color: #e6e6e6 !important;
+}
+.tc-row,
+.tc-cell {
+  border-color: #333 !important;
+}
+[class^="tc-"],
+[class*=" tc-"] {
+  background-color: #1a1a1a !important;
+  border-color: #333 !important;
+  color: #e6e6e6 !important;
+}
+[class^="tc-"] svg,
+[class*=" tc-"] svg {
+  fill: #e6e6e6 !important;
+}
+/* Re-assert the table grid itself and cells as plain (the broad rule above
+   would otherwise also darken editable cell backgrounds, which should stay
+   transparent so typed text is visible against the article-prose area). */
+.tc-table,
+.tc-row,
+.tc-cell,
+.tc-wrap {
+  background-color: transparent !important;
+}
+
+/* Visually distinguish heading levels inside the editor — otherwise H2/H3/H4
+   all render the same size as body text and are indistinguishable while writing. */
+.ce-header {
+  font-weight: 700;
+  margin: 0.5em 0 0.3em;
+}
+h2.ce-header { font-size: 1.6em; }
+h3.ce-header { font-size: 1.3em; }
+h4.ce-header { font-size: 1.1em; }
+
+/* Block settings / "convert to" toolbar */
+.ce-conversion-toolbar,
+.ce-settings {
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  color: #e6e6e6 !important;
+}
+.ce-conversion-tool,
+.ce-conversion-tool__icon {
+  color: #e6e6e6 !important;
+}
