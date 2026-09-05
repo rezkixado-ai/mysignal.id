@@ -6,7 +6,9 @@ export default function Footer() {
       <div className="wrap">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 30, paddingBottom: 36 }}>
           <div>
-            <span className="brand">MY<span>SIGNAL</span></span>
+            <span className="brand">
+              <img src="/logo.png" alt="MySignal" style={{ height: 30, width: 'auto', display: 'block' }} />
+            </span>
             <p style={{ color: 'var(--text-dim)', fontSize: 14, marginTop: 10, maxWidth: 280 }}>
               Signals from the digital world — technology, decoded for everyone.
             </p>

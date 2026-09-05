@@ -34,7 +34,9 @@ export default function Navbar() {
     <>
       <header className={`site-header${scrolled ? ' scrolled' : ''}`}>
         <div className="wrap nav-inner">
-          <Link href="/" className="brand" onClick={() => setOpen(false)}>MY<span>SIGNAL</span></Link>
+          <Link href="/" className="brand" onClick={() => setOpen(false)}>
+            <img src="/logo.png" alt="MySignal" style={{ height: 28, width: 'auto', display: 'block' }} />
+          </Link>
 
           <nav className="nav-links">
             {LINKS.map((l) => (
@@ -61,7 +63,9 @@ export default function Navbar() {
 
       <aside id="mobileMenu" className={`mobile-menu${open ? ' open' : ''}`} aria-hidden={!open}>
         <div className="mobile-menu-head">
-          <span className="brand">MY<span>SIGNAL</span></span>
+          <span className="brand">
+            <img src="/logo.png" alt="MySignal" style={{ height: 26, width: 'auto', display: 'block' }} />
+          </span>
           <button className="mobile-menu-close" aria-label="Close menu" onClick={() => setOpen(false)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
           </button>
