@@ -122,10 +122,18 @@ export default async function Home() {
           <div className="news-grid">
             {news.length > 0 ? (
               <>
-                <a href={`/article/${news[0].slug}`} className="news-feature">
+                <a href={`/article/${news[0].slug}`} className="news-feature" style={{ position: 'relative' }}>
                   {news[0].cover_media_type === 'video'
                     ? <video src={news[0].cover_media_url} muted loop autoPlay playsInline />
                     : <img src={news[0].cover_media_url} alt={news[0].title} loading="lazy" />}
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute', inset: 0,
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.15) 65%, rgba(0,0,0,0) 100%)',
+                      pointerEvents: 'none'
+                    }}
+                  />
                   <div className="nf-content">
                     <span className="eyebrow"><span className="live-dot" /> {news[0].category}</span>
                     <h3>{news[0].title}</h3>
