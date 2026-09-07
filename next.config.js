@@ -33,6 +33,8 @@ const nextConfig = {
       { source: '/', headers: noStore },
       { source: '/news', headers: noStore },
       { source: '/article/:slug*', headers: noStore },
+      { source: '/about', headers: noStore },
+      { source: '/contact', headers: noStore },
       { source: '/api/:path*', headers: noStore }
     ];
   }
