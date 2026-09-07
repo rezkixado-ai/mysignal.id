@@ -18,7 +18,10 @@ function loadEditorJs() {
       import('@editorjs/table'),
       import('@editorjs/image'),
       import('./blocks/ImageGridTool.js'),
-      import('./blocks/FaqTool.js')
+      import('./blocks/FaqTool.js'),
+      import('./blocks/ProcessStepsTool.js'),
+      import('./blocks/LogoMarqueeTool.js'),
+      import('./blocks/ContactCardTool.js')
     ]).then(([
       { default: EditorJS },
       { default: Header },
@@ -28,8 +31,11 @@ function loadEditorJs() {
       { default: Table },
       { default: ImageTool },
       { default: ImageGridTool },
-      { default: FaqTool }
-    ]) => ({ EditorJS, Header, Paragraph, ListTool, Quote, Table, ImageTool, ImageGridTool, FaqTool }));
+      { default: FaqTool },
+      { default: ProcessStepsTool },
+      { default: LogoMarqueeTool },
+      { default: ContactCardTool }
+    ]) => ({ EditorJS, Header, Paragraph, ListTool, Quote, Table, ImageTool, ImageGridTool, FaqTool, ProcessStepsTool, LogoMarqueeTool, ContactCardTool }));
   }
   return editorJsModules;
 }
@@ -60,7 +66,7 @@ export default function BlockEditor({ value, onChange }) {
 
     loadEditorJs().then((mods) => {
       if (cancelled || !holderRef.current) return;
-      const { EditorJS, Header, Paragraph, ListTool, Quote, Table, ImageTool, ImageGridTool, FaqTool } = mods;
+      const { EditorJS, Header, Paragraph, ListTool, Quote, Table, ImageTool, ImageGridTool, FaqTool, ProcessStepsTool, LogoMarqueeTool, ContactCardTool } = mods;
 
       editorRef.current = new EditorJS({
         holder: holderRef.current,
@@ -84,7 +90,10 @@ export default function BlockEditor({ value, onChange }) {
             }
           },
           imageGrid: { class: ImageGridTool, config: { uploadMedia } },
-          faq: { class: FaqTool }
+          faq: { class: FaqTool },
+          processSteps: { class: ProcessStepsTool },
+          logoMarquee: { class: LogoMarqueeTool, config: { uploadMedia } },
+          contactCard: { class: ContactCardTool }
         },
         onChange: saveNow
       });

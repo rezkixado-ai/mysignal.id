@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 
 const LINKS = [
   { to: '/', label: 'Home' },
-  { to: '/about', label: 'About MySignal' },
+  { to: '/about', label: 'About Xi:gnal' },
   { to: '/gallery', label: 'Gallery' },
   { to: '/news', label: 'News' },
   { to: '/contact', label: 'Contact Us' }

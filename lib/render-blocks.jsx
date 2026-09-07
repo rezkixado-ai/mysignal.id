@@ -85,6 +85,76 @@ export function renderBlocks(blocksData) {
           </div>
         );
 
+      case 'processSteps':
+        return (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, margin: '32px 0' }}>
+            {block.data.steps.map((step, si) => (
+              <div key={si} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px 20px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 700, color: 'var(--blue-2, #6ea8fe)', marginBottom: 10 }}>
+                  {String(si + 1).padStart(2, '0')}
+                </div>
+                <h4 style={{ marginBottom: 6 }}>{step.title}</h4>
+                {step.description && <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>{step.description}</p>}
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'logoMarquee': {
+        if (!block.data.logos || block.data.logos.length === 0) return null;
+        // Duplicate the list once so the CSS animation (-50% translateX) loops seamlessly.
+        const doubled = [...block.data.logos, ...block.data.logos];
+        return (
+          <div key={key} style={{ margin: '32px 0', overflow: 'hidden' }}>
+            <style>{`
+              @keyframes xiLogoMarqueeScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+              .xi-logo-marquee { display: flex; align-items: center; gap: 48px; width: max-content; animation: xiLogoMarqueeScroll 28s linear infinite; }
+              .xi-logo-marquee img { height: 34px; width: auto; opacity: 0.75; filter: grayscale(1); }
+            `}</style>
+            <div className="xi-logo-marquee">
+              {doubled.map((logo, li) => (
+                <img key={li} src={logo.url} alt={logo.name || ''} />
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      case 'contactCard': {
+        const ICONS = { email: '✉️', phone: '📞', whatsapp: '💬', address: '📍', instagram: '📷', tiktok: '🎵', youtube: '▶️', other: '🔗' };
+        return (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, margin: '32px 0' }}>
+            {block.data.items.map((item, ci) => {
+              const href = item.type === 'email'
+                ? `mailto:${item.value}`
+                : item.type === 'phone' || item.type === 'whatsapp'
+                  ? `tel:${item.value}`
+                  : item.value;
+              const inner = (
+                <>
+                  <div style={{ fontSize: 22, marginBottom: 8 }}>{ICONS[item.type] || ICONS.other}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>
+                    {item.label || item.type}
+                  </div>
+                  <div style={{ fontSize: 15, wordBreak: 'break-word' }}>{item.value}</div>
+                </>
+              );
+              return (
+                <a
+                  key={ci}
+                  href={href}
+                  target={item.type === 'email' || item.type === 'phone' || item.type === 'whatsapp' ? undefined : '_blank'}
+                  rel="noopener noreferrer"
+                  style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, display: 'block', color: 'inherit', textDecoration: 'none' }}
+                >
+                  {inner}
+                </a>
+              );
+            })}
+          </div>
+        );
+      }
+
       default:
         return null;
     }
