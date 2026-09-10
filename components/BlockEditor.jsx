@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { forwardRef, useEffect, useRef, useCallback, useImperativeHandle } from 'react';
 import { uploadMedia } from '../lib/api.js';
 import '../styles/editorjs-theme.css';
 
@@ -45,7 +45,14 @@ function loadEditorJs() {
 // a controlled input) — it only reads `value` on first mount. When switching
 // which article is being edited, render this with a fresh `key` (e.g.
 // key={form.id || 'new'}) so React remounts it with the new article's blocks.
-export default function BlockEditor({ value, onChange }) {
+//
+// Editor.js's own onChange is debounced (~400ms), so React state
+// (form.content_blocks) can lag a moment behind what's actually in the
+// editor. A forwardRef exposing getBlocks() lets the parent's save/submit
+// handler pull the guaranteed-current state directly from Editor.js right
+// before sending it to the server, instead of trusting whatever the last
+// onChange happened to capture.
+const BlockEditor = forwardRef(function BlockEditor({ value, onChange }, ref) {
   const holderRef = useRef(null);
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -60,6 +67,13 @@ export default function BlockEditor({ value, onChange }) {
       // Editor.js throws transiently mid-keystroke on some tools; ignore.
     }
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    async getBlocks() {
+      if (!editorRef.current) return value;
+      return editorRef.current.save();
+    }
+  }), [value]);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,4 +133,6 @@ export default function BlockEditor({ value, onChange }) {
       }}
     />
   );
-}
+});
+
+export default BlockEditor;

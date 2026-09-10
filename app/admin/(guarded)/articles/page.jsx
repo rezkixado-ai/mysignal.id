@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   getArticles, createArticle, updateArticle, deleteArticle, uploadMedia
 } from '../../../../lib/api.js';
@@ -30,6 +30,7 @@ function Toast({ toast }) {
 }
 
 export default function AdminArticles() {
+  const editorRef = useRef(null);
   const [articles, setArticles] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -87,8 +88,14 @@ export default function AdminArticles() {
     if (!form.title) { notify('Title is required', 'error'); return; }
     setSaving(true);
     try {
-      if (form.id) { await updateArticle(form); notify('Article updated'); }
-      else { await createArticle(form); notify('Article created'); }
+      // Pull the guaranteed-current state directly from Editor.js instead of
+      // trusting form.content_blocks, which can lag behind by Editor.js's
+      // own ~400ms onChange debounce if Publish/Update is clicked right
+      // after typing or adding a block.
+      const freshBlocks = editorRef.current ? await editorRef.current.getBlocks() : form.content_blocks;
+      const payload = { ...form, content_blocks: freshBlocks };
+      if (form.id) { await updateArticle(payload); notify('Article updated'); }
+      else { await createArticle(payload); notify('Article created'); }
       resetForm();
       refresh();
     } catch (err) {
@@ -147,6 +154,7 @@ export default function AdminArticles() {
               {/* key forces a clean remount when switching which article is being edited,
                   since BlockEditor only reads its initial `value` once on mount. */}
               <BlockEditor
+                ref={editorRef}
                 key={form.id || 'new'}
                 value={form.content_blocks}
                 onChange={(blocks) => setForm((f) => ({ ...f, content_blocks: blocks }))}

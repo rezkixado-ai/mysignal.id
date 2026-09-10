@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSitePage, updateSitePage } from '../../../../lib/api.js';
 import BlockEditor from '../../../../components/BlockEditor.jsx';
 
@@ -17,6 +17,7 @@ function Toast({ toast }) {
 }
 
 export default function AdminPages() {
+  const editorRef = useRef(null);
   const [activeSlug, setActiveSlug] = useState('about');
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,13 @@ export default function AdminPages() {
     e.preventDefault();
     setSaving(true);
     try {
-      await updateSitePage(form);
+      // Pull the guaranteed-current state directly from Editor.js instead of
+      // trusting form.content_blocks, which can lag behind by Editor.js's
+      // own ~400ms onChange debounce if Save is clicked right after typing.
+      const freshBlocks = editorRef.current ? await editorRef.current.getBlocks() : form.content_blocks;
+      const payload = { ...form, content_blocks: freshBlocks };
+      await updateSitePage(payload);
+      setForm((f) => ({ ...f, content_blocks: freshBlocks }));
       notify('Page updated');
     } catch (err) {
       notify(err.message, 'error');
@@ -104,6 +111,7 @@ export default function AdminPages() {
             {/* key forces a clean remount when switching between About/Contact,
                 since BlockEditor only reads its initial value once on mount. */}
             <BlockEditor
+              ref={editorRef}
               key={activeSlug}
               value={form.content_blocks}
               onChange={(blocks) => setForm((f) => ({ ...f, content_blocks: blocks }))}
