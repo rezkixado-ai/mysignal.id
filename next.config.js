@@ -35,6 +35,7 @@ const nextConfig = {
       { source: '/article/:slug*', headers: noStore },
       { source: '/about', headers: noStore },
       { source: '/contact', headers: noStore },
+      { source: '/gallery', headers: noStore },
       { source: '/api/:path*', headers: noStore }
     ];
   }
