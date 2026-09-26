@@ -1,6 +1,11 @@
 import { db } from '../lib/db.js';
 
-const SITE_URL = 'https://mysignal.id'; // update once the real domain is live
+// Netlify automatically injects `URL` at both build and runtime, set to
+// whatever this deploy's actual primary domain is (currently
+// xignal.netlify.app; will become mysignal.id automatically once that
+// domain is attached — no code change needed then). The hardcoded fallback
+// only kicks in for local `npm run dev`, where that env var isn't set.
+const SITE_URL = process.env.URL || 'https://mysignal.id';
 
 export default async function sitemap() {
   const staticRoutes = [
