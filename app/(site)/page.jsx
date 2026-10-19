@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import {
-  getSettings, getHeroImage, getProducts, getVideos, getArticleList, getBrands, waLink
+  getSettings, getHeroSlides, getProducts, getVideos, getArticleList, getBrands, waLink
 } from '../../lib/xdata.js';
 import HeroArt from '../../components/site/HeroArt.jsx';
 import SIcon from '../../components/site/SIcon.jsx';
@@ -23,8 +23,8 @@ const TICKER = ['XIGNAL', 'CONNECTIVITY', 'FIBER OPTIC', 'NETWORK', 'INFRASTRUCT
 
 export default async function Home() {
   const settings = await getSettings();
-  const [heroImg, products, videos, articles, brands] = await Promise.all([
-    getHeroImage(settings),
+  const [heroSlides, products, videos, articles, brands] = await Promise.all([
+    getHeroSlides(settings),
     getProducts({ featured: true, limit: 4 }),
     getVideos(8),
     getArticleList({ limit: 6 }),
@@ -43,7 +43,7 @@ export default async function Home() {
     <>
       {/* HERO */}
       <section className="x-hero">
-        <div className="x-wrap x-hero-in">
+        <div className={`x-wrap x-hero-in${heroSlides.length ? ' stack' : ''}`}>
           <div className="x-hero-copy">
             <p className="x-eyebrow">{s.hero_eyebrow.split('•').map((t, i, a) => (
               <span key={i}>{t.trim()}{i < a.length - 1 ? <i>•</i> : null}</span>
@@ -58,7 +58,7 @@ export default async function Home() {
               <Link href="/video" className="x-btn x-btn-line"><SIcon name="play" size={14} /> LIHAT SOLUSI</Link>
             </div>
           </div>
-          <div className={`x-hero-art${heroImg ? ' has-img' : ''}`}><HeroArt src={heroImg} /></div>
+          <div className={`x-hero-art${heroSlides.length ? ' has-img' : ''}`}><HeroArt slides={heroSlides} /></div>
           <div className="x-hero-side">{s.hero_side_text}</div>
         </div>
       </section>

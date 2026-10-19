@@ -1,6 +1,8 @@
 // Ilustrasi hero: pakai gambar dari CMS kalau ada, kalau tidak pakai ilustrasi serat optik (SVG) sementara.
-export default function HeroArt({ src }) {
-  if (src) return <img src={src} alt="Kabel fiber optik dan perangkat jaringan Xignal" loading="eager" />;
+import HeroBanner from './HeroBanner.jsx';
+
+export default function HeroArt({ slides = [] }) {
+  if (slides.length) return <HeroBanner slides={slides} />;
   const strands = [
     ['#4ADE80', 'M40 330 C 140 330, 170 120, 300 150 S 430 90, 560 40'],
     ['#22D3EE', 'M40 340 C 150 330, 190 170, 310 190 S 440 120, 570 80'],

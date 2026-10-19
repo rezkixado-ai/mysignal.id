@@ -626,9 +626,36 @@
 .xs .x-feat:hover .x-feat-img img, .xs .x-feat:hover .x-feat-img video, .xs .x-feat:hover .x-feat-img .x-ph{transform:scale(1.1);}
 .xs .x-feat-img .x-ph, .xs .x-ac-img .x-ph{width:100%; height:100%;}
 
-/* gambar banner dari CMS: ditengahkan, tepinya memudar menyatu dengan latar (bukan kotak keras) */
-.x-hero-art.has-img{margin:18px 0 0; min-height:0; align-items:center; position:relative;}
-.x-hero-art.has-img::before{content:""; position:absolute; inset:8% 4%; z-index:-1; background:radial-gradient(closest-side,rgba(34,211,238,.22),transparent 72%); filter:blur(18px);}
-.x-hero-art.has-img img{width:100%; height:auto; max-height:460px; object-fit:contain; object-position:center; filter:none;
-  -webkit-mask-image:radial-gradient(ellipse 74% 76% at 50% 50%,#000 58%,transparent 100%); mask-image:radial-gradient(ellipse 74% 76% at 50% 50%,#000 58%,transparent 100%);}
-@media (min-width:900px){ .x-hero-art.has-img{margin:0; min-height:0;} .x-hero-art.has-img img{max-height:500px;} }
+/* gambar banner dari CMS: tampil penuh (full view) di bawah headline + CTA */
+.x-hero-in.stack{grid-template-columns:minmax(0,1fr); min-height:0; gap:30px; align-items:start;}
+.x-hero-in.stack .x-hero-copy{max-width:760px;}
+.x-hero-art.has-img{margin:0; min-height:0; display:block; position:relative; width:100%;}
+.x-hero-art.has-img::before{content:""; position:absolute; inset:-3% 3%; z-index:-1; background:radial-gradient(closest-side,rgba(34,211,238,.26),transparent 74%); filter:blur(22px);}
+.x-hero-art.has-img > img{display:block; width:100%; height:auto; max-height:none; object-fit:contain; border-radius:var(--x-r,14px); border:1px solid rgba(34,211,238,.28);
+  box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 60px rgba(34,211,238,.14); filter:none; -webkit-mask-image:none; mask-image:none;}
+@media (min-width:900px){ .x-hero-in.stack{gap:44px;} .x-hero-art.has-img{margin:0;} .x-hero-art.has-img img{max-height:none;} }
+
+/* ───────── banner slider hero (crossfade + Ken Burns) ───────── */
+.x-hbn{position:relative; width:100%; aspect-ratio:16/9; overflow:hidden; background:#06101C; border-radius:var(--x-r,14px); border:1px solid rgba(34,211,238,.28);
+  box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 60px rgba(34,211,238,.14); isolation:isolate; touch-action:pan-y;}
+.x-hbn-stage{position:absolute; inset:0;}
+.x-hbn-slide{position:absolute; inset:0; overflow:hidden; will-change:opacity,transform;}
+.x-hbn-link{display:block; width:100%; height:100%;}
+.x-hbn-img{display:block; width:100%; height:100%; object-fit:cover; user-select:none; -webkit-user-drag:none; will-change:transform; transform-origin:50% 50%;}
+.x-hbn::after{content:""; position:absolute; inset:0; z-index:2; pointer-events:none; background:linear-gradient(180deg,transparent 70%,rgba(4,10,18,.55));}
+.x-hbn-nav{position:absolute; z-index:4; top:50%; width:44px; height:44px; margin-top:-22px; display:grid; place-items:center; border-radius:50%; cursor:pointer;
+  color:#fff; background:rgba(4,10,18,.55); border:1px solid rgba(255,255,255,.28); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  opacity:0; transform:scale(.9); transition:opacity .3s, transform .3s cubic-bezier(.34,1.56,.64,1), background .2s, border-color .2s;}
+.x-hbn-nav.prev{left:14px;} .x-hbn-nav.next{right:14px;}
+.x-hbn:hover .x-hbn-nav,.x-hbn:focus-within .x-hbn-nav{opacity:1; transform:none;}
+.x-hbn-nav:hover{background:rgba(34,211,238,.25); border-color:#22D3EE;} .x-hbn-nav:active{transform:scale(.9);}
+@media (hover:none){ .x-hbn-nav{opacity:.85; transform:none; width:38px; height:38px; margin-top:-19px;} }
+.x-hbn-bar{position:absolute; z-index:4; left:50%; bottom:14px; transform:translateX(-50%); display:flex; gap:8px; padding:0 14px; width:min(420px,86%);}
+.x-hbn-seg{flex:1; height:22px; padding:9px 0; background:none; border:0; cursor:pointer;}
+.x-hbn-fill{display:block; height:3px; background:rgba(255,255,255,.3); overflow:hidden; border-radius:2px; transition:background .3s;}
+.x-hbn-seg.done .x-hbn-fill{background:rgba(255,255,255,.85);}
+.x-hbn-seg:hover .x-hbn-fill{background:rgba(255,255,255,.5);} .x-hbn-seg.done:hover .x-hbn-fill{background:#fff;}
+.x-hbn-fill i{display:block; width:100%; height:100%; transform-origin:0 50%; background:linear-gradient(90deg,#4ADE80,#2DD4BF,#3B82F6);}
+.x-hbn-count{position:absolute; z-index:4; right:16px; bottom:14px; font-size:11px; letter-spacing:.16em; color:rgba(255,255,255,.7); font-variant-numeric:tabular-nums;}
+.x-hbn-count b{color:#fff;}
+@media (max-width:640px){ .x-hbn-count{display:none;} }
