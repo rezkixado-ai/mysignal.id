@@ -625,3 +625,10 @@
 .xs .x-ac:hover .x-ac-img img, .xs .x-ac:hover .x-ac-img video, .xs .x-ac:hover .x-ac-img .x-ph,
 .xs .x-feat:hover .x-feat-img img, .xs .x-feat:hover .x-feat-img video, .xs .x-feat:hover .x-feat-img .x-ph{transform:scale(1.1);}
 .xs .x-feat-img .x-ph, .xs .x-ac-img .x-ph{width:100%; height:100%;}
+
+/* gambar banner dari CMS: ditengahkan, tepinya memudar menyatu dengan latar (bukan kotak keras) */
+.x-hero-art.has-img{margin:18px 0 0; min-height:0; align-items:center; position:relative;}
+.x-hero-art.has-img::before{content:""; position:absolute; inset:8% 4%; z-index:-1; background:radial-gradient(closest-side,rgba(34,211,238,.22),transparent 72%); filter:blur(18px);}
+.x-hero-art.has-img img{width:100%; height:auto; max-height:460px; object-fit:contain; object-position:center; filter:none;
+  -webkit-mask-image:radial-gradient(ellipse 74% 76% at 50% 50%,#000 58%,transparent 100%); mask-image:radial-gradient(ellipse 74% 76% at 50% 50%,#000 58%,transparent 100%);}
+@media (min-width:900px){ .x-hero-art.has-img{margin:0; min-height:0;} .x-hero-art.has-img img{max-height:500px;} }

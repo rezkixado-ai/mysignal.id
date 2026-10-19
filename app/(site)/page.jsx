@@ -58,7 +58,7 @@ export default async function Home() {
               <Link href="/video" className="x-btn x-btn-line"><SIcon name="play" size={14} /> LIHAT SOLUSI</Link>
             </div>
           </div>
-          <div className="x-hero-art"><HeroArt src={heroImg} /></div>
+          <div className={`x-hero-art${heroImg ? ' has-img' : ''}`}><HeroArt src={heroImg} /></div>
           <div className="x-hero-side">{s.hero_side_text}</div>
         </div>
       </section>
