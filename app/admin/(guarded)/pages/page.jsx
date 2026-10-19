@@ -11,16 +11,12 @@ const PAGES = [
 
 const EMPTY = { slug: 'about', title: '', content_blocks: { blocks: [] }, meta_title: '', meta_description: '' };
 
-function Toast({ toast }) {
-  if (!toast) return null;
-  return <div className={`toast ${toast.type}`}>{toast.message}</div>;
-}
-
 export default function AdminPages() {
   const editorRef = useRef(null);
   const [activeSlug, setActiveSlug] = useState('about');
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -32,16 +28,14 @@ export default function AdminPages() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadFailed(false);
     getSitePage(activeSlug)
       .then((data) => {
         if (cancelled) return;
-        if (!data) {
-          setForm({ ...EMPTY, slug: activeSlug });
-          return;
-        }
+        if (!data) { setForm({ ...EMPTY, slug: activeSlug }); return; }
         let contentBlocks = { blocks: [] };
         if (data.content_blocks) {
-          try { contentBlocks = JSON.parse(data.content_blocks); } catch { /* keep empty */ }
+          try { contentBlocks = typeof data.content_blocks === 'string' ? JSON.parse(data.content_blocks) : data.content_blocks; } catch { /* keep empty */ }
         }
         setForm({
           slug: data.slug,
@@ -51,23 +45,20 @@ export default function AdminPages() {
           meta_description: data.meta_description || ''
         });
       })
-      .catch((err) => !cancelled && notify(err.message, 'error'))
-      .finally(() => !cancelled && setLoading(false));
+      .catch((err) => { if (!cancelled) { setLoadFailed(true); notify(err.message, 'error'); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [activeSlug]);
 
-  async function handleSave(e) {
-    e.preventDefault();
+  async function handleSave() {
+    if (loadFailed) { notify('Halaman gagal dimuat — reload dulu supaya isinya tidak tertimpa kosong', 'error'); return; }
     setSaving(true);
     try {
-      // Pull the guaranteed-current state directly from Editor.js instead of
-      // trusting form.content_blocks, which can lag behind by Editor.js's
-      // own ~400ms onChange debounce if Save is clicked right after typing.
+      // Take the blocks straight from Editor.js; form.content_blocks can lag its debounce.
       const freshBlocks = editorRef.current ? await editorRef.current.getBlocks() : form.content_blocks;
-      const payload = { ...form, content_blocks: freshBlocks };
-      await updateSitePage(payload);
+      await updateSitePage({ ...form, content_blocks: freshBlocks });
       setForm((f) => ({ ...f, content_blocks: freshBlocks }));
-      notify('Page updated');
+      notify('Halaman tersimpan');
     } catch (err) {
       notify(err.message, 'error');
     } finally {
@@ -77,66 +68,69 @@ export default function AdminPages() {
 
   return (
     <div>
-      <div className="admin-topbar">
-        <h1 style={{ fontSize: 24 }}>Pages</h1>
+      <div className="adm-head">
+        <div>
+          <h1 className="adm-h1 hl">Pages</h1>
+          <p className="adm-sub">Edit halaman statis situs.</p>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="pills">
         {PAGES.map((p) => (
-          <button
-            key={p.slug}
-            type="button"
-            className={p.slug === activeSlug ? 'btn' : 'btn btn-ghost'}
-            onClick={() => setActiveSlug(p.slug)}
-          >
-            {p.label}
-          </button>
+          <button key={p.slug} type="button" className={`pill${p.slug === activeSlug ? ' on' : ''}`} onClick={() => setActiveSlug(p.slug)}>{p.label}</button>
         ))}
       </div>
 
       {loading ? (
-        <p style={{ color: 'var(--text-faint)' }}>Loading…</p>
+        <p className="adm-sub">Memuat…</p>
       ) : (
-        <form onSubmit={handleSave} className="card" style={{ padding: 28, maxWidth: 880 }}>
-          <div className="field">
-            <label>Page Title</label>
-            <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          </div>
-
-          <div className="field">
-            <label>Body</label>
-            <p style={{ fontSize: 12, color: 'var(--text-faint)', marginBottom: 8 }}>
-              Sama kayak editor artikel — klik lalu <code>Tab</code>/<code>Enter</code> buat pilih block. Ada 3 block tambahan khusus halaman ini: <strong>Process Steps</strong>, <strong>Logo Marquee</strong>, dan <strong>Contact Card</strong>.
-            </p>
-            {/* key forces a clean remount when switching between About/Contact,
-                since BlockEditor only reads its initial value once on mount. */}
-            <BlockEditor
-              ref={editorRef}
-              key={activeSlug}
-              value={form.content_blocks}
-              onChange={(blocks) => setForm((f) => ({ ...f, content_blocks: blocks }))}
-            />
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--border)', marginTop: 20, paddingTop: 18 }}>
-            <p style={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-faint)', marginBottom: 12 }}>SEO</p>
-            <div className="field">
-              <label>SEO Title</label>
-              <input type="text" value={form.meta_title} onChange={(e) => setForm({ ...form, meta_title: e.target.value })} maxLength={70} />
+        <div className="ed-grid" style={{ maxWidth: 900 }}>
+          <div className="ed-main">
+            <div className="field ed-title">
+              <label>Judul halaman</label>
+              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             </div>
-            <div className="field">
-              <label>Meta Description</label>
-              <textarea value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} maxLength={170} />
-            </div>
-          </div>
 
-          <button className="btn" type="submit" disabled={saving} style={{ marginTop: 16 }}>
-            {saving ? 'Saving…' : 'Save Page'}
-          </button>
-        </form>
+            <div className="field ed-body">
+              <label>Isi halaman</label>
+              <p style={{ fontSize: 12, color: 'var(--text-faint)', margin: '2px 0 8px' }}>
+                Sama seperti editor artikel. Ada 3 blok khusus halaman: <b>Process Steps</b>, <b>Logo Marquee</b>, <b>Contact Card</b>.
+              </p>
+              {/* key remounts the editor when switching between About / Contact. */}
+              <BlockEditor
+                ref={editorRef}
+                key={activeSlug}
+                value={form.content_blocks}
+                onChange={(blocks) => setForm((f) => ({ ...f, content_blocks: blocks }))}
+              />
+            </div>
+
+            <details className="acc ed-seo">
+              <summary>SEO</summary>
+              <div className="acc-body">
+                <div className="field">
+                  <label>SEO title</label>
+                  <input type="text" value={form.meta_title} onChange={(e) => setForm({ ...form, meta_title: e.target.value })} maxLength={70} />
+                </div>
+                <div className="field" style={{ marginTop: 14 }}>
+                  <label>Meta description</label>
+                  <textarea value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} maxLength={170} />
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
       )}
 
-      <Toast toast={toast} />
+      {!loading && (
+        <>
+          <div style={{ height: 84 }} />
+          <div className="ed-bar above-nav">
+            <button type="button" className="btn" disabled={saving} onClick={handleSave}>{saving ? 'Menyimpan…' : 'Simpan halaman'}</button>
+          </div>
+        </>
+      )}
+      {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
     </div>
   );
 }

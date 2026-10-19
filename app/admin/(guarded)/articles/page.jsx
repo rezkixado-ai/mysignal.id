@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   getArticles, createArticle, updateArticle, deleteArticle, uploadMedia
 } from '../../../../lib/api.js';
 import BlockEditor from '../../../../components/BlockEditor.jsx';
 import SEOPanel from '../../../../components/SEOPanel.jsx';
 import ArticlePreviewModal from '../../../../components/ArticlePreviewModal.jsx';
+import Icon from '../../../../components/Icon.jsx';
+import RowMenu from '../../../../components/admin/RowMenu.jsx';
+import useNewTrigger from '../../../../components/admin/useNewTrigger.js';
 
-const CATEGORIES = ['Cybersecurity', 'Cloud', 'Network', 'Fiber Optic', 'AI', 'Big Tech', 'Tech Business', 'Hardware'];
+const CATEGORIES = ['Edukasi', 'Panduan', 'Produk', 'Teknis', 'Troubleshooting', 'Fiber Optik', 'Networking', 'Internet', 'Cybersecurity', 'Artificial Intelligence', 'Cloud', 'Hardware'];
 const TYPES = [
   { value: 'news', label: 'News (Latest Signals)' },
   { value: 'analysis', label: 'Analysis' },
@@ -24,19 +27,22 @@ const EMPTY = {
   meta_title: '', meta_description: '', focus_keyword: ''
 };
 
-function Toast({ toast }) {
-  if (!toast) return null;
-  return <div className={`toast ${toast.type}`}>{toast.message}</div>;
-}
+const dateFmt = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
 export default function AdminArticles() {
   const editorRef = useRef(null);
   const [articles, setArticles] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const [editing, setEditing] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [q, setQ] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [opening, setOpening] = useState(null);
 
   function notify(message, type = 'ok') {
     setToast({ message, type });
@@ -45,37 +51,70 @@ export default function AdminArticles() {
 
   async function refresh() {
     try { setArticles(await getArticles({ all: '1', limit: 100 })); } catch (err) { notify(err.message, 'error'); }
+    setLoaded(true);
   }
   useEffect(() => { refresh(); }, []);
 
-  function resetForm() { setForm(EMPTY); }
+  // hide bottom nav + top bar while the editor is open
+  useEffect(() => {
+    document.body.classList.toggle('adm-editing', editing);
+    return () => document.body.classList.remove('adm-editing');
+  }, [editing]);
+
+  // warn before leaving the tab with unsaved changes
+  useEffect(() => {
+    if (!editing || !dirty) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [editing, dirty]);
+
+  const set = (patch) => { setDirty(true); setForm((f) => ({ ...f, ...patch })); };
+
+  function newArticle() {
+    setForm(EMPTY);
+    setDirty(false);
+    setEditing(true);
+    window.scrollTo({ top: 0 });
+  }
+  useNewTrigger(newArticle);
 
   async function editArticle(a) {
+    setOpening(a.id);
     try {
       const full = await getArticles({ slug: a.slug });
-      // content_blocks comes back from the DB as a JSON string — parse it,
-      // falling back to an empty block list for pre-migration articles.
+      // content_blocks arrives from the DB as a JSON string. If the fetch fails we
+      // refuse to open the editor, so a later save can never overwrite the body with an empty block list.
       let contentBlocks = { blocks: [] };
-      if (full.content_blocks) {
-        try { contentBlocks = JSON.parse(full.content_blocks); } catch { /* keep empty */ }
+      if (full && full.content_blocks) {
+        try { contentBlocks = typeof full.content_blocks === 'string' ? JSON.parse(full.content_blocks) : full.content_blocks; } catch { /* pre-migration article: keep empty */ }
       }
       setForm({ ...EMPTY, ...a, content_blocks: contentBlocks });
-    } catch {
-      setForm({ ...EMPTY, ...a, content_blocks: { blocks: [] } });
+      setDirty(false);
+      setEditing(true);
+      window.scrollTo({ top: 0 });
+    } catch (err) {
+      notify('Gagal membuka artikel: ' + err.message, 'error');
+    } finally {
+      setOpening(null);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function closeEditor() {
+    if (dirty && !confirm('Perubahan belum disimpan. Keluar tanpa simpan?')) return;
+    setEditing(false);
+    setDirty(false);
+    setForm(EMPTY);
   }
 
   async function handleCoverUpload(file) {
     if (!file) return;
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-    if (!isImage && !isVideo) { notify('Please upload an image or video file', 'error'); return; }
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) { notify('Pilih file gambar atau video', 'error'); return; }
     setUploadingCover(true);
     try {
       const result = await uploadMedia(file);
-      setForm((f) => ({ ...f, cover_media_url: result.url, cover_media_type: result.mediaType }));
-      notify('Cover uploaded');
+      set({ cover_media_url: result.url, cover_media_type: result.mediaType });
+      notify('Cover ter-upload');
     } catch (err) {
       notify(err.message, 'error');
     } finally {
@@ -83,20 +122,18 @@ export default function AdminArticles() {
     }
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.title) { notify('Title is required', 'error'); return; }
+  async function save(publishState) {
+    if (!form.title.trim()) { notify('Judul wajib diisi', 'error'); return; }
     setSaving(true);
     try {
-      // Pull the guaranteed-current state directly from Editor.js instead of
-      // trusting form.content_blocks, which can lag behind by Editor.js's
-      // own ~400ms onChange debounce if Publish/Update is clicked right
-      // after typing or adding a block.
+      // Pull the current blocks straight from Editor.js; form.content_blocks can lag behind its debounce.
       const freshBlocks = editorRef.current ? await editorRef.current.getBlocks() : form.content_blocks;
-      const payload = { ...form, content_blocks: freshBlocks };
-      if (form.id) { await updateArticle(payload); notify('Article updated'); }
-      else { await createArticle(payload); notify('Article created'); }
-      resetForm();
+      const payload = { ...form, is_published: publishState, content_blocks: freshBlocks };
+      if (form.id) { await updateArticle(payload); notify('Artikel di-update'); }
+      else { await createArticle(payload); notify(publishState ? 'Artikel terbit' : 'Draft tersimpan'); }
+      setEditing(false);
+      setDirty(false);
+      setForm(EMPTY);
       refresh();
     } catch (err) {
       notify(err.message, 'error');
@@ -105,181 +142,218 @@ export default function AdminArticles() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this article?')) return;
-    try { await deleteArticle(id); notify('Deleted'); refresh(); } catch (err) { notify(err.message, 'error'); }
+  async function handleDelete(a) {
+    if (!confirm(`Hapus artikel "${a.title}"?`)) return;
+    try { await deleteArticle(a.id); notify('Terhapus'); refresh(); } catch (err) { notify(err.message, 'error'); }
   }
 
   async function togglePublish(a) {
     try { await updateArticle({ ...a, is_published: a.is_published ? 0 : 1 }); refresh(); } catch (err) { notify(err.message, 'error'); }
   }
 
-  return (
-    <div>
-      <div className="admin-topbar">
-        <h1 style={{ fontSize: 24 }}>Articles</h1>
-        {form.id && <button className="btn btn-ghost" onClick={resetForm}>+ New Article</button>}
-      </div>
+  const shown = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return articles.filter((a) => {
+      if (filter === 'pub' && !a.is_published) return false;
+      if (filter === 'draft' && a.is_published) return false;
+      if (s && !`${a.title} ${a.category}`.toLowerCase().includes(s)) return false;
+      return true;
+    });
+  }, [articles, q, filter]);
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 24, alignItems: 'start' }}>
-          {/* Main column — title, excerpt, body editor, then the SEO metabox underneath it */}
-          <div className="card" style={{ padding: 28 }}>
-            <div className="field">
+  const toastEl = toast ? <div className={`toast ${toast.type}`}>{toast.message}</div> : null;
+
+  /* ------------------------------ EDITOR ------------------------------ */
+  if (editing) {
+    return (
+      <div>
+        <div className="ed-head">
+          <button type="button" className="icon-btn plain" onClick={closeEditor} aria-label="Kembali"><Icon name="back" /></button>
+          <h1>{form.id ? 'Edit artikel' : 'Artikel baru'}</h1>
+          <button type="button" className="icon-btn" onClick={() => setShowPreview(true)} aria-label="Preview"><Icon name="eye" /></button>
+        </div>
+
+        <div className="ed-grid">
+          <div className="ed-main">
+            <div className="ed-title">
               <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Add title"
-                required
-                style={{ fontSize: 26, fontWeight: 600, padding: '10px 4px', border: 'none', borderBottom: '1px solid var(--border)', background: 'transparent', width: '100%' }}
+                type="text" className="title-input" placeholder="Judul artikel"
+                value={form.title} onChange={(e) => set({ title: e.target.value })}
               />
             </div>
 
-            <div className="field">
-              <label>Slug (leave blank to auto-generate from title)</label>
-              <input type="text" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="why-cloud-infrastructure-matters" />
-            </div>
-
-            <div className="field">
+            <div className="field ed-excerpt">
               <label>Excerpt</label>
-              <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} placeholder="One or two sentences shown on cards" />
+              <textarea value={form.excerpt} onChange={(e) => set({ excerpt: e.target.value })} placeholder="1–2 kalimat yang tampil di kartu" />
             </div>
 
-            <div className="field">
-              <label>Body</label>
-              <p style={{ fontSize: 12, color: 'var(--text-faint)', marginBottom: 8 }}>
-                Klik area di bawah lalu tekan <code>Tab</code> atau <code>Enter</code> untuk pilih jenis block (heading, paragraf, gambar, image grid, tabel, FAQ, dll) — bisa disusun bebas di posisi manapun.
+            <div className="field ed-body">
+              <label>Isi artikel</label>
+              <p style={{ fontSize: 12, color: 'var(--text-faint)', margin: '2px 0 8px' }}>
+                Ketuk area di bawah, lalu tombol <b>+</b> di kiri baris untuk pilih blok (heading, paragraf, gambar, tabel, FAQ, dll).
               </p>
-              {/* key forces a clean remount when switching which article is being edited,
-                  since BlockEditor only reads its initial `value` once on mount. */}
+              {/* key forces a clean remount per article; BlockEditor reads `value` only on mount. */}
               <BlockEditor
                 ref={editorRef}
                 key={form.id || 'new'}
                 value={form.content_blocks}
-                onChange={(blocks) => setForm((f) => ({ ...f, content_blocks: blocks }))}
+                onChange={(blocks) => set({ content_blocks: blocks })}
               />
             </div>
 
-            {/* SEO metabox — WordPress/Yoast style: sits below the editor, full width of the main column */}
-            <div style={{ borderTop: '1px solid var(--border)', marginTop: 28, paddingTop: 20 }}>
-              <p style={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-faint)', marginBottom: 12 }}>SEO</p>
-
-              <div className="form-row">
+            <details className="acc ed-seo">
+              <summary>SEO</summary>
+              <div className="acc-body">
                 <div className="field">
-                  <label>Focus Keyword</label>
-                  <input type="text" placeholder="e.g. zero-day attack" value={form.focus_keyword} onChange={(e) => setForm({ ...form, focus_keyword: e.target.value })} />
+                  <label>Focus keyword</label>
+                  <input type="text" placeholder="mis. zero-day attack" value={form.focus_keyword} onChange={(e) => set({ focus_keyword: e.target.value })} />
                 </div>
-                <div className="field">
-                  <label>SEO Title (leave blank to use the title above)</label>
-                  <input type="text" value={form.meta_title} onChange={(e) => setForm({ ...form, meta_title: e.target.value })} maxLength={70} />
+                <div className="field" style={{ marginTop: 14 }}>
+                  <label>SEO title (kosong = pakai judul)</label>
+                  <input type="text" value={form.meta_title} onChange={(e) => set({ meta_title: e.target.value })} maxLength={70} />
                 </div>
+                <div className="field" style={{ marginTop: 14 }}>
+                  <label>Meta description (kosong = pakai excerpt)</label>
+                  <textarea value={form.meta_description} onChange={(e) => set({ meta_description: e.target.value })} maxLength={170} />
+                </div>
+                <div style={{ marginTop: 14 }}><SEOPanel article={form} onApply={(patch) => set(patch)} /></div>
               </div>
-              <div className="field">
-                <label>Meta Description (leave blank to use the excerpt)</label>
-                <textarea value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} maxLength={170} />
-              </div>
-
-              <SEOPanel article={form} />
-            </div>
+            </details>
           </div>
 
-          {/* Sidebar — Publish box, Category & Type, Cover Media (WordPress-style right rail) */}
-          <div>
-            <div className="card" style={{ marginBottom: 16 }}>
-              <h3 style={{ fontSize: 14, marginBottom: 14 }}>Publish</h3>
-
-              <div className="field">
-                <label>Status</label>
-                <select value={form.is_published} onChange={(e) => setForm({ ...form, is_published: Number(e.target.value) })}>
-                  <option value={1}>Published</option>
-                  <option value={0}>Draft</option>
-                </select>
-              </div>
-              <div className="field">
-                <label>Read Time (minutes)</label>
-                <input type="number" value={form.read_minutes} onChange={(e) => setForm({ ...form, read_minutes: Number(e.target.value) })} />
-              </div>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--text-dim)', marginBottom: 8 }}>
-                <input type="checkbox" checked={!!form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked ? 1 : 0 })} />
-                Featured (Deeper Signals highlight)
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--text-dim)', marginBottom: 16 }}>
-                <input type="checkbox" checked={!!form.is_breaking} onChange={(e) => setForm({ ...form, is_breaking: e.target.checked ? 1 : 0 })} />
-                Breaking (Latest Signals feature slot)
-              </label>
-
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setShowPreview(true)}
-                style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }}
-              >
-                Preview
-              </button>
-              <button className="btn" type="submit" disabled={saving || uploadingCover} style={{ width: '100%', justifyContent: 'center' }}>
-                {saving ? 'Saving…' : form.id ? 'Update Article' : 'Publish Article'}
-              </button>
-            </div>
-
-            <div className="card" style={{ marginBottom: 16 }}>
-              <h3 style={{ fontSize: 14, marginBottom: 14 }}>Category & Type</h3>
-              <div className="field">
-                <label>Category</label>
-                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label>Type</label>
-                <select value={form.article_type} onChange={(e) => setForm({ ...form, article_type: e.target.value })}>
-                  {TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="card">
-              <h3 style={{ fontSize: 14, marginBottom: 14 }}>Cover Media</h3>
-              <div className="upload-box" onClick={() => document.getElementById('coverFile').click()}>
-                {uploadingCover ? 'Uploading…' : 'Click to upload cover image / video'}
-                <input id="coverFile" type="file" accept="image/*,video/*" hidden onChange={(e) => handleCoverUpload(e.target.files?.[0])} />
-              </div>
-              {form.cover_media_url && (
-                <div className="preview-media">
-                  {form.cover_media_type === 'video'
+          <aside>
+            <div className="ed-cover">
+              <label className={`cover-box${form.cover_media_url ? " has" : ""}`}>
+                {form.cover_media_url ? (
+                  form.cover_media_type === 'video'
                     ? <video src={form.cover_media_url} muted loop autoPlay playsInline />
-                    : <img src={form.cover_media_url} alt="cover preview" />}
+                    : <img src={form.cover_media_url} alt="cover" />
+                ) : (
+                  <span className="cover-empty"><Icon name="upload" size={26} />{uploadingCover ? 'Uploading…' : 'Ketuk untuk upload cover (gambar / video)'}</span>
+                )}
+                <input type="file" accept="image/*,video/*" hidden onChange={(e) => { handleCoverUpload(e.target.files?.[0]); e.target.value = ''; }} />
+              </label>
+              {form.cover_media_url && (
+                <div className="cover-actions">
+                  <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+                    {uploadingCover ? 'Uploading…' : 'Ganti cover'}
+                    <input type="file" accept="image/*,video/*" hidden onChange={(e) => { handleCoverUpload(e.target.files?.[0]); e.target.value = ''; }} />
+                  </label>
+                  <button type="button" className="btn btn-ghost" onClick={() => set({ cover_media_url: '', cover_media_type: 'image' })}>Hapus cover</button>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </form>
 
-      <div className="slide-list" style={{ marginTop: 24 }}>
-        {articles.length === 0 && <p style={{ color: 'var(--text-faint)', fontSize: 13.5 }}>No articles yet — write your first one.</p>}
-        {articles.map((a) => (
-          <div className="slide-row" key={a.id}>
-            <div className="thumb">
-              {a.cover_media_type === 'video' ? <video src={a.cover_media_url} muted /> : <img src={a.cover_media_url} alt={a.title} />}
+            <div className="ed-meta">
+              <div className="form-row">
+                <div className="field">
+                  <label>Kategori</label>
+                  <select value={form.category} onChange={(e) => set({ category: e.target.value })}>
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Tipe</label>
+                  <select value={form.article_type} onChange={(e) => set({ article_type: e.target.value })}>
+                    {TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="meta">
-              <strong>{a.title}</strong>
-              <span>{a.category} · {a.article_type}{a.is_breaking ? ' · Breaking' : ''}{a.is_featured ? ' · Featured' : ''} · {a.is_published ? 'Published' : 'Draft'}</span>
-            </div>
-            <div className="row-actions">
-              <button onClick={() => togglePublish(a)}>{a.is_published ? 'Unpublish' : 'Publish'}</button>
-              <button onClick={() => editArticle(a)}>Edit</button>
-              <button onClick={() => handleDelete(a.id)} style={{ color: 'var(--red)' }}>Delete</button>
-            </div>
-          </div>
+
+            <details className="acc ed-settings">
+              <summary>Pengaturan</summary>
+              <div className="acc-body">
+                <div className="field">
+                  <label>Slug (kosong = otomatis dari judul)</label>
+                  <input type="text" value={form.slug} onChange={(e) => set({ slug: e.target.value })} placeholder="why-cloud-infrastructure-matters" />
+                </div>
+                <div className="field" style={{ marginTop: 14 }}>
+                  <label>Waktu baca (menit)</label>
+                  <input type="number" inputMode="numeric" value={form.read_minutes} onChange={(e) => set({ read_minutes: Number(e.target.value) })} />
+                </div>
+                <label className="check" style={{ marginTop: 6 }}>
+                  <input type="checkbox" checked={!!form.is_featured} onChange={(e) => set({ is_featured: e.target.checked ? 1 : 0 })} />
+                  Featured (sorotan Deeper Signals)
+                </label>
+                <label className="check">
+                  <input type="checkbox" checked={!!form.is_breaking} onChange={(e) => set({ is_breaking: e.target.checked ? 1 : 0 })} />
+                  Breaking (slot utama Latest Signals)
+                </label>
+              </div>
+            </details>
+          </aside>
+        </div>
+
+        <div className="ed-bar">
+          <button type="button" className="btn btn-ghost" disabled={saving || uploadingCover} onClick={() => save(0)}>
+            {saving ? 'Menyimpan…' : 'Simpan draft'}
+          </button>
+          <button type="button" className="btn" disabled={saving || uploadingCover} onClick={() => save(1)}>
+            {saving ? 'Menyimpan…' : form.id && form.is_published ? 'Update' : 'Publish'}
+          </button>
+        </div>
+
+        {showPreview && <ArticlePreviewModal article={form} onClose={() => setShowPreview(false)} />}
+        {toastEl}
+      </div>
+    );
+  }
+
+  /* ------------------------------- LIST ------------------------------- */
+  return (
+    <div>
+      <div className="adm-head">
+        <div>
+          <h1 className="adm-h1 hl">Artikel</h1>
+          <p className="adm-sub">{loaded ? `${articles.length} artikel` : 'Memuat…'}</p>
+        </div>
+        <button type="button" className="btn" onClick={newArticle}><Icon name="plus" size={18} /> Baru</button>
+      </div>
+
+      <div className="search">
+        <Icon name="search" size={18} />
+        <input type="search" placeholder="Cari judul atau kategori" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div className="pills">
+        {[['all', 'Semua'], ['pub', 'Publish'], ['draft', 'Draft']].map(([v, l]) => (
+          <button key={v} type="button" className={`pill${filter === v ? ' on' : ''}`} onClick={() => setFilter(v)}>{l}</button>
         ))}
       </div>
 
-      {showPreview && <ArticlePreviewModal article={form} onClose={() => setShowPreview(false)} />}
-
-      <Toast toast={toast} />
+      <div className="clist">
+        {loaded && shown.length === 0 && (
+          <p className="adm-sub">{articles.length === 0 ? 'Belum ada artikel — tulis yang pertama.' : 'Tidak ada yang cocok.'}</p>
+        )}
+        {shown.map((a) => (
+          <div className="crow" key={a.id}>
+            <button type="button" className="crow-main" onClick={() => editArticle(a)} disabled={opening === a.id}>
+              <span className="crow-thumb">
+                {a.cover_media_url
+                  ? (a.cover_media_type === 'video' ? <video src={a.cover_media_url} muted /> : <img src={a.cover_media_url} alt="" loading="lazy" />)
+                  : <Icon name="file" size={22} />}
+              </span>
+              <span className="crow-body">
+                <strong>{opening === a.id ? 'Membuka…' : a.title}</strong>
+                <span className="crow-meta">
+                  <em className={`badge ${a.is_published ? 'pub' : 'draft'}`}>{a.is_published ? 'PUBLISH' : 'DRAFT'}</em>
+                  <span>{a.category}</span>
+                  {a.is_breaking ? <em className="badge info">BREAKING</em> : null}
+                  {a.is_featured ? <em className="badge info">FEATURED</em> : null}
+                  <span>{dateFmt(a.published_at)}</span>
+                </span>
+              </span>
+            </button>
+            <RowMenu items={[
+              { label: 'Edit', onClick: () => editArticle(a) },
+              { label: a.is_published ? 'Jadikan draft' : 'Publish', onClick: () => togglePublish(a) },
+              ...(a.is_published ? [{ label: 'Lihat di situs', onClick: () => window.open(`/article/${a.slug}`, '_blank') }] : []),
+              { label: 'Hapus', danger: true, onClick: () => handleDelete(a) }
+            ]} />
+          </div>
+        ))}
+      </div>
+      {toastEl}
     </div>
   );
 }
