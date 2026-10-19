@@ -659,3 +659,27 @@
 .x-hbn-count{position:absolute; z-index:4; right:16px; bottom:14px; font-size:11px; letter-spacing:.16em; color:rgba(255,255,255,.7); font-variant-numeric:tabular-nums;}
 .x-hbn-count b{color:#fff;}
 @media (max-width:640px){ .x-hbn-count{display:none;} }
+
+/* ───────── hero: slider jadi latar penuh (kiri–kanan) di belakang headline + CTA ───────── */
+.x-hero.has-bg{padding:0; background:#040A12;}
+.x-hero-bg{position:absolute; inset:0; z-index:-2;}
+.x-hbn.bleed{position:absolute; inset:0; width:100%; height:100%; aspect-ratio:auto; border:0; border-radius:0; box-shadow:none; background:#040A12;}
+.x-hbn.bleed::after{z-index:2; background:
+  linear-gradient(90deg,rgba(4,10,18,.94) 0%,rgba(4,10,18,.78) 34%,rgba(4,10,18,.30) 66%,rgba(4,10,18,.08) 100%),
+  linear-gradient(180deg,rgba(4,10,18,.7) 0%,rgba(4,10,18,0) 24%,rgba(4,10,18,0) 62%,#040A12 100%);}
+.x-hero.has-bg .x-hero-in{min-height:clamp(600px,86vh,780px); align-items:end; padding-top:110px; padding-bottom:96px; gap:0;}
+.x-hero.has-bg .x-hero-copy{pointer-events:none; text-shadow:0 2px 24px rgba(0,0,0,.55);}
+.x-hero.has-bg .x-hero-copy a{pointer-events:auto;}
+.x-hero.has-bg .x-hero-copy{max-width:640px;}
+.x-hbn.bleed .x-hbn-bar{bottom:26px; z-index:5;} .x-hbn.bleed .x-hbn-count{bottom:26px; right:24px; z-index:5;}
+.x-hbn.bleed .x-hbn-nav{z-index:5;}
+@media (min-width:900px){
+  .x-hero.has-bg .x-hero-in{align-items:center; padding-bottom:110px;}
+  .x-hbn.bleed .x-hbn-nav.prev{left:24px;} .x-hbn.bleed .x-hbn-nav.next{right:24px;}
+}
+@media (max-width:640px){
+  .x-hero.has-bg .x-hero-in{min-height:640px; padding-bottom:84px;}
+  .x-hbn.bleed::after{background:linear-gradient(180deg,rgba(4,10,18,.72) 0%,rgba(4,10,18,.35) 30%,rgba(4,10,18,.72) 62%,#040A12 100%);}
+}
+.x-hbn.bleed .x-hbn-fill{background:rgba(255,255,255,.42);} .x-hbn.bleed .x-hbn-seg.done .x-hbn-fill{background:rgba(255,255,255,.9);}
+@media (max-width:899px){ .x-hbn.bleed .x-hbn-nav{display:none;} }

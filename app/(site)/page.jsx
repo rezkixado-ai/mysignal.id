@@ -3,6 +3,7 @@ import {
   getSettings, getHeroSlides, getProducts, getVideos, getArticleList, getBrands, waLink
 } from '../../lib/xdata.js';
 import HeroArt from '../../components/site/HeroArt.jsx';
+import HeroBanner from '../../components/site/HeroBanner.jsx';
 import SIcon from '../../components/site/SIcon.jsx';
 import SectionHead from '../../components/site/SectionHead.jsx';
 import CountUp from '../../components/site/CountUp.jsx';
@@ -42,8 +43,9 @@ export default async function Home() {
   return (
     <>
       {/* HERO */}
-      <section className="x-hero">
-        <div className={`x-wrap x-hero-in${heroSlides.length ? ' stack' : ''}`}>
+      <section className={`x-hero${heroSlides.length ? ' has-bg' : ''}`}>
+        {heroSlides.length > 0 && <div className="x-hero-bg"><HeroBanner slides={heroSlides} bleed /></div>}
+        <div className={`x-wrap x-hero-in`}>
           <div className="x-hero-copy">
             <p className="x-eyebrow">{s.hero_eyebrow.split('•').map((t, i, a) => (
               <span key={i}>{t.trim()}{i < a.length - 1 ? <i>•</i> : null}</span>
@@ -58,7 +60,7 @@ export default async function Home() {
               <Link href="/video" className="x-btn x-btn-line"><SIcon name="play" size={14} /> LIHAT SOLUSI</Link>
             </div>
           </div>
-          <div className={`x-hero-art${heroSlides.length ? ' has-img' : ''}`}><HeroArt slides={heroSlides} /></div>
+          {!heroSlides.length && <div className="x-hero-art"><HeroArt slides={[]} /></div>}
           <div className="x-hero-side">{s.hero_side_text}</div>
         </div>
       </section>

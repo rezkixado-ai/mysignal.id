@@ -17,7 +17,7 @@ function kb(i) {
   return { s: zoomIn ? [1.02, 1.085] : [1.085, 1.02], x, y };
 }
 
-export default function HeroBanner({ slides, interval = 5600 }) {
+export default function HeroBanner({ slides, interval = 5600, bleed = false }) {
   const n = slides.length;
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);
@@ -75,7 +75,7 @@ export default function HeroBanner({ slides, interval = 5600 }) {
   return (
     <MotionConfig reducedMotion="never">
       <div
-        ref={root} className="x-hbn" role="region" aria-roledescription="carousel" aria-label="Banner Xignal"
+        ref={root} className={`x-hbn${bleed ? ' bleed' : ''}`} role="region" aria-roledescription="carousel" aria-label="Banner Xignal"
         onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
         onKeyDown={(e) => { if (e.key === 'ArrowRight') next(); if (e.key === 'ArrowLeft') prev(); }}
       >
