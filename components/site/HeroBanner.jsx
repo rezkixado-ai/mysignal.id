@@ -8,13 +8,15 @@ const EASE = [0.22, 1, 0.36, 1];
 const FADE = 1.2;          // detik, durasi crossfade
 const KB = ['in-tl', 'in-br', 'out-tr', 'in-bl'];
 
-// Ken Burns: zoom pelan + geser tipis, arahnya bergantian tiap slide
-function kb(i) {
-  const m = KB[i % KB.length];
-  const zoomIn = m.startsWith('in');
-  const x = m.endsWith('tl') || m.endsWith('bl') ? [-1.2, 1.2] : [1.2, -1.2];
-  const y = m.endsWith('tl') || m.endsWith('tr') ? [-0.8, 0.8] : [0.8, -0.8];
-  return { s: zoomIn ? [1.02, 1.085] : [1.085, 1.02], x, y };
+// Ken Burns: pakai pilihan dari CMS per slide; kalau kosong, arahnya bergantian otomatis
+const AUTO = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'];
+function kb(i, pick) {
+  const m = pick && (AUTO.includes(pick) || pick === 'none') ? pick : AUTO[i % AUTO.length];
+  if (m === 'none') return { s: [1.001, 1.001], x: [0, 0], y: [0, 0] };
+  if (m === 'zoom-in') return { s: [1.02, 1.09], x: [-0.8, 0.8], y: [-0.6, 0.6] };
+  if (m === 'zoom-out') return { s: [1.09, 1.02], x: [0.8, -0.8], y: [0.6, -0.6] };
+  if (m === 'pan-left') return { s: [1.07, 1.07], x: [1.8, -1.8], y: [0, 0] };
+  return { s: [1.07, 1.07], x: [-1.8, 1.8], y: [0, 0] };
 }
 
 export default function HeroBanner({ slides, interval = 5600, bleed = false }) {
@@ -36,7 +38,10 @@ export default function HeroBanner({ slides, interval = 5600, bleed = false }) {
 
   // muat gambar berikutnya lebih dulu supaya transisi tidak tersendat
   useEffect(() => {
-    [1, 2].forEach((k) => { const im = new window.Image(); im.src = slides[(idx + k) % n].src; });
+    [1, 2].forEach((k) => {
+      const nx = slides[(idx + k) % n];
+      if (nx.type === 'video') { const v = document.createElement('video'); v.preload = 'auto'; v.muted = true; v.src = nx.src; } else { const im = new window.Image(); im.src = nx.src; }
+    });
   }, [idx, n, slides]);
 
   // autoplay: berhenti saat di-hover / tab tersembunyi / banner di luar layar
@@ -51,18 +56,31 @@ export default function HeroBanner({ slides, interval = 5600, bleed = false }) {
     return () => { document.removeEventListener('visibilitychange', onVis); io && io.disconnect(); };
   }, []);
   const [hover, setHover] = useState(false);
-  const paused = hover || hold || !visible;
+  const cur = slides[idx];
+  const curVideo = cur.type === 'video';
+  const [vdur, setVdur] = useState(0);            // durasi video yang sedang tayang (detik)
+  useEffect(() => { setVdur(0); }, [idx]);
+  // Video: tidak dipotong — pindah saat video selesai (onEnded). Timer ini hanya pengaman kalau video macet.
+  const paused = curVideo ? false : (hover || hold || !visible);
   useEffect(() => {
     if (n < 2 || paused) return undefined;
-    const t = setTimeout(next, interval);
+    const t = setTimeout(next, curVideo ? 30000 : interval);
     return () => clearTimeout(t);
-  }, [idx, paused, n, next, interval]);
+  }, [idx, paused, n, next, interval, curVideo]);
 
   const s = slides[idx];
-  const k = kb(idx);
+  const k = kb(idx, s.kb);
+  const isVideo = s.type === 'video';
   const link = s.href && s.href !== '#' ? s.href : null;
   const external = link && /^https?:/i.test(link);
-  const Img = (
+  const Img = isVideo ? (
+    <video
+      src={s.src} className="x-hbn-img" autoPlay muted playsInline preload="auto" loop={n < 2}
+      onLoadedMetadata={(e) => setVdur(e.currentTarget.duration || 0)}
+      onEnded={() => { if (n > 1) next(); }}
+      onError={() => { if (n > 1) setTimeout(next, 1200); }}
+    />
+  ) : (
     <motion.img
       src={s.src} alt={s.title || 'Banner Xignal'} draggable={false}
       initial={{ scale: k.s[0], x: `${k.x[0]}%`, y: `${k.y[0]}%` }}
@@ -110,8 +128,8 @@ export default function HeroBanner({ slides, interval = 5600, bleed = false }) {
                 <button key={sl.src + i} type="button" role="tab" aria-selected={i === idx} aria-label={`Slide ${i + 1}`} className={`x-hbn-seg${i === idx ? ' on' : ''}${i < idx ? ' done' : ''}`} onClick={() => go(i)}>
                   <span className="x-hbn-fill">
                     {i === idx && (
-                      <motion.i key={`${idx}-${paused}`} initial={{ scaleX: paused ? 0 : 0 }} animate={{ scaleX: 1 }}
-                        transition={{ duration: paused ? 9999 : interval / 1000, ease: 'linear' }} />
+                      <motion.i key={`${idx}-${paused}-${vdur}`} initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                        transition={{ duration: paused ? 9999 : (isVideo ? Math.max(vdur, 1) : interval / 1000), ease: 'linear' }} />
                     )}
                   </span>
                 </button>
