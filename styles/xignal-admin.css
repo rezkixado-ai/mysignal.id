@@ -348,3 +348,14 @@ button.sx-chip.add{background:rgba(34,211,238,.12); color:var(--sc); border-colo
 .adm .sheet.closing{animation:xaout .2s cubic-bezier(.4,0,1,1) both;}
 .scrim.closing{animation:xafadeout .2s ease both;}
 @media (min-width:1024px){ .adm .sheet.closing{animation:xapopout .2s cubic-bezier(.4,0,1,1) both;} }
+
+/* ===== Pemilih font (Pengaturan → Tampilan & Font) ===== */
+.xa-fonts{display:grid; gap:10px; grid-template-columns:1fr;}
+@media (min-width:640px){ .xa-fonts{grid-template-columns:repeat(3,1fr);} }
+.xa-font{display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left; padding:14px; min-height:96px; border-radius:12px; border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--text); cursor:pointer; transition:border-color .2s, background .2s, transform .15s;}
+.xa-font:hover{border-color:rgba(34,211,238,.5);}
+.xa-font:active{transform:scale(.98);}
+.xa-font.on{border-color:#22D3EE; background:rgba(34,211,238,.1); box-shadow:0 0 0 1px #22D3EE inset;}
+.xa-font-sample{font-size:20px; line-height:1.25; color:#fff;}
+.xa-font b{font-size:13px; font-weight:700;}
+.xa-font small{font-size:12px; color:var(--text-faint); line-height:1.4;}

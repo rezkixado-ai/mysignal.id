@@ -11,8 +11,8 @@
   --text:#FFFFFF; --text-dim:#A7A7AD; --text-faint:#7A7A86;
   --blue:#6366F1; --blue-2:#818CF8; --cyan:#22D3EE; --pink:#EC4899;
   --red:#F0504F; --amber:#F5B942; --green:#34D399;
-  --font-display:'Red Hat Display',system-ui,sans-serif; --font-head:'Red Hat Display',system-ui,sans-serif;
-  --font-body:'Red Hat Display',system-ui,sans-serif; --font-mono:'Red Hat Display',system-ui,sans-serif;
+  --font-display:var(--f-head,'Red Hat Display',system-ui,sans-serif); --font-head:var(--f-head,'Red Hat Display',system-ui,sans-serif);
+  --font-body:var(--f-body,'Inter',system-ui,sans-serif); --font-mono:var(--f-body,'Inter',system-ui,sans-serif);
   --radius:14px; --radius-sm:10px;
   --grad:linear-gradient(90deg,#4F46E5 0%,#C026D3 60%,#DB2777 100%);
   --grad-text:linear-gradient(90deg,#818CF8 0%,#C084FC 50%,#F472B6 100%);
@@ -435,6 +435,6 @@ header.site-header{background:rgba(11,11,15,.82); border-bottom:1px solid var(--
 @media (prefers-reduced-motion:reduce){ .sheet{animation:none;} }
 
 /* ===== Font global: Red Hat Display ===== */
-:root{--font-display:'Red Hat Display',system-ui,sans-serif; --font-head:'Red Hat Display',system-ui,sans-serif; --font-body:'Red Hat Display',system-ui,sans-serif; --font-mono:'Red Hat Display',system-ui,sans-serif;}
-body,button,input,select,textarea{font-family:'Red Hat Display',system-ui,sans-serif;}
+:root{--font-display:var(--f-head,'Red Hat Display',system-ui,sans-serif); --font-head:var(--f-head,'Red Hat Display',system-ui,sans-serif); --font-body:var(--f-body,'Inter',system-ui,sans-serif); --font-mono:var(--f-body,'Inter',system-ui,sans-serif);}
+body,button,input,select,textarea{font-family:var(--f-body,'Inter',system-ui,sans-serif);}
 .hl{font-weight:800; line-height:1;}

@@ -6,6 +6,8 @@ import { getSettings, waLink, fmtDate } from '../../../../lib/xdata.js';
 import { ArticleCard } from '../../../../components/site/Cards.jsx';
 import Media from '../../../../components/site/Media.jsx';
 import SIcon from '../../../../components/site/SIcon.jsx';
+import ArticleToc from '../../../../components/site/ArticleToc.jsx';
+import ShareButtons from '../../../../components/site/ShareButtons.jsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,6 +68,11 @@ export default async function ArticleDetail({ params }) {
   const wa = waLink(settings, `Halo Xignal, saya baca artikel "${article.title}" dan ingin berdiskusi.`);
   const site = process.env.SITE_URL || process.env.URL || 'https://mysignal.id';
 
+  const authorName = settings.article_author_name || 'Admin Xignal';
+  const authorRole = settings.article_author_role || '';
+  const authorPhoto = settings.article_author_photo || '';
+  const m = String(article.title).match(/^(.+?[?:])\s+(\S.*)$/);
+  const titleParts = m && m[1].length <= 40 ? { lead: m[1], rest: m[2] } : {};
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -74,7 +81,7 @@ export default async function ArticleDetail({ params }) {
     ...(article.cover_media_type === 'image' && article.cover_media_url ? { image: [article.cover_media_url] } : {}),
     datePublished: article.published_at,
     dateModified: article.updated_at || article.published_at,
-    author: { '@type': 'Organization', name: 'Xignal' },
+    author: { '@type': authorPhoto || settings.article_author_name ? 'Person' : 'Organization', name: authorName },
     publisher: { '@type': 'Organization', name: 'Xignal' },
     mainEntityOfPage: `${site}/article/${slug}`
   };
@@ -85,59 +92,71 @@ export default async function ArticleDetail({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
 
-      <header className="x-phead x-art-head">
-        <div className="x-wrap x-art-narrow">
-          <nav className="x-crumb" aria-label="Breadcrumb">
-            <Link href="/">Home</Link><SIcon name="chevronR" size={12} />
-            <Link href="/artikel">Artikel</Link><SIcon name="chevronR" size={12} />
-            <span>{article.category || 'Detail'}</span>
-          </nav>
-          {article.category ? <span className="x-tag">{article.category}</span> : null}
-          <h1 className="x-art-title">{article.title}</h1>
-          {article.excerpt ? <p>{article.excerpt}</p> : null}
-          <div className="x-by"><i /> <span>Admin Xignal</span><span>|</span><span>{fmtDate(article.published_at)}</span>{article.read_minutes ? <><span>|</span><span>{article.read_minutes} menit baca</span></> : null}</div>
-        </div>
-      </header>
-
-      <section className="x-sec" style={{ paddingTop: 10 }}>
-        <div className="x-wrap x-art-narrow">
+      <article className="x-art">
+        <div className="x-wrap x-art-top">
           {article.cover_media_url ? (
-            <div className="x-art-cover">
+            <div className="x-art-cover2">
               <Media src={article.cover_media_url} video={article.cover_media_type === 'video'} alt={article.title} icon="file" {...(article.cover_media_type === 'video' ? { controls: true } : {})} />
             </div>
           ) : null}
 
-          {article.contentBlocks ? (
-            <div className="article-prose x-prose">{renderBlocks(article.contentBlocks)}</div>
-          ) : (
-            <>
-              <div className="article-prose x-prose" dangerouslySetInnerHTML={{ __html: article.body_html || '<p>Artikel ini belum memiliki konten.</p>' }} />
-              {article.media && article.media.length > 0 && (
-                <div className="x-prose-media">
-                  {article.media.map((m) => (
-                    <figure key={m.id}>
-                      {m.media_type === 'video'
-                        ? <video src={m.media_url} controls />
-                        : <img src={m.media_url} alt={m.caption || ''} loading="lazy" />}
-                      {m.caption && <figcaption>{m.caption}</figcaption>}
-                    </figure>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          <aside className="x-art-cta">
-            <div>
-              <strong>Butuh rekomendasi produk atau solusi jaringan?</strong>
-              <span>Tim sales Xignal siap membantu konsultasi kebutuhan Anda.</span>
+          <header className={`x-art-card${article.cover_media_url ? ' over' : ''}`}>
+            <div className="x-art-toprow">
+              <nav className="x-crumb" aria-label="Breadcrumb">
+                <Link href="/">Home</Link><SIcon name="chevronR" size={12} />
+                <Link href="/artikel">Artikel</Link><SIcon name="chevronR" size={12} />
+                <span>{article.category || 'Detail'}</span>
+              </nav>
+              <span className="x-art-when">{fmtDate(article.published_at)}{article.read_minutes ? ` | ${article.read_minutes} menit baca` : ''}</span>
             </div>
-            <a className="x-btn x-btn-grad" href={wa} target="_blank" rel="noreferrer"><SIcon name="whatsapp" size={16} /> TANYA SALES</a>
-          </aside>
-
-          <Link href="/artikel" className="x-back"><SIcon name="arrow" size={14} style={{ transform: 'rotate(180deg)' }} /> Kembali ke Artikel</Link>
+            {article.category ? <span className="x-tag">{article.category}</span> : null}
+            <h1 className="x-art-title">{titleParts.lead ? <><span className="x-grad-text">{titleParts.lead}</span> {titleParts.rest}</> : article.title}</h1>
+            {article.excerpt ? <p className="x-art-excerpt">{article.excerpt}</p> : null}
+            <div className="x-art-by">
+              <div className="x-art-author">
+                {authorPhoto ? <img src={authorPhoto} alt="" /> : <i aria-hidden="true" />}
+                <div><strong>Oleh {authorName}</strong>{authorRole ? <small>{authorRole}</small> : null}</div>
+              </div>
+              <ShareButtons title={article.title} path={`/article/${slug}`} />
+            </div>
+          </header>
         </div>
-      </section>
+
+        <div className="x-wrap x-art-layout">
+          <aside className="x-art-side"><ArticleToc target=".x-art-main .x-prose" /></aside>
+          <div className="x-art-main">
+            {article.contentBlocks ? (
+              <div className="article-prose x-prose">{renderBlocks(article.contentBlocks)}</div>
+            ) : (
+              <>
+                <div className="article-prose x-prose" dangerouslySetInnerHTML={{ __html: article.body_html || '<p>Artikel ini belum memiliki konten.</p>' }} />
+                {article.media && article.media.length > 0 && (
+                  <div className="x-prose-media">
+                    {article.media.map((m) => (
+                      <figure key={m.id}>
+                        {m.media_type === 'video'
+                          ? <video src={m.media_url} controls />
+                          : <img src={m.media_url} alt={m.caption || ''} loading="lazy" />}
+                        {m.caption && <figcaption>{m.caption}</figcaption>}
+                      </figure>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            <aside className="x-art-cta">
+              <div>
+                <strong>Butuh rekomendasi produk atau solusi jaringan?</strong>
+                <span>Tim sales Xignal siap membantu konsultasi kebutuhan Anda.</span>
+              </div>
+              <a className="x-btn x-btn-grad" href={wa} target="_blank" rel="noreferrer"><SIcon name="whatsapp" size={16} /> TANYA SALES</a>
+            </aside>
+
+            <Link href="/artikel" className="x-back"><SIcon name="arrow" size={14} style={{ transform: 'rotate(180deg)' }} /> Kembali ke Artikel</Link>
+          </div>
+        </div>
+      </article>
 
       {related.length > 0 && (
         <section className="x-sec x-sec-alt">

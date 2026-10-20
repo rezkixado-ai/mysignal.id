@@ -4,9 +4,19 @@ import { useEffect, useState } from 'react';
 import { xGetSettings, xSaveSettings } from '../../../../lib/xapi.js';
 import { uploadMedia } from '../../../../lib/api.js';
 import Icon from '../../../../components/Icon.jsx';
+import { HEADLINE_FONTS, BODY_FONTS, previewHref } from '../../../../lib/xfonts.js';
 
 const T = 'text', A = 'textarea';
 const GROUPS = [
+  { id: 'tampilan', title: 'Tampilan & Font', fields: [
+    ['font_heading', 'Font headline (judul)', 'font-head', 'Dipakai untuk semua judul di seluruh website.'],
+    ['font_body', 'Font body (isi teks)', 'font-body', 'Dipakai untuk paragraf, artikel, tombol, dan form di seluruh website.']
+  ] },
+  { id: 'penulis', title: 'Penulis Artikel', fields: [
+    ['article_author_name', 'Nama penulis', T, 'Tampil di halaman detail artikel.'],
+    ['article_author_role', 'Jabatan / keterangan', T],
+    ['article_author_photo', 'Foto penulis', 'image', 'Opsional. Kosongkan untuk memakai ikon gradasi.']
+  ] },
   { id: 'kontak', title: 'Kontak & WhatsApp', fields: [
     ['wa_number', 'Nomor WhatsApp', T, 'Format 62812xxxx tanpa + atau spasi. Dipakai semua tombol WhatsApp.'],
     ['footer_tagline', 'Tagline footer', A],
@@ -30,24 +40,29 @@ const GROUPS = [
 
 export default function Pengaturan() {
   const [vals, setVals] = useState(null);
-  const [openId, setOpenId] = useState('kontak');
+  const [openId, setOpenId] = useState('tampilan');
+  const [orig, setOrig] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState(null);
   const notify = (message, type = 'ok') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
-  useEffect(() => { xGetSettings().then(setVals).catch((e) => notify(e.message, 'error')); }, []);
+  useEffect(() => { xGetSettings().then((v) => { setVals(v); setOrig({ h: v.font_heading, b: v.font_body }); }).catch((e) => notify(e.message, 'error')); }, []);
   const set = (k, v) => setVals((s) => ({ ...s, [k]: v }));
 
   async function save(e) {
     e.preventDefault();
     setSaving(true);
-    try { await xSaveSettings(vals); notify('Pengaturan tersimpan'); } catch (err) { notify(err.message, 'error'); } finally { setSaving(false); }
+    try {
+      await xSaveSettings(vals);
+      notify('Pengaturan tersimpan');
+      if (orig && (orig.h !== vals.font_heading || orig.b !== vals.font_body)) setTimeout(() => window.location.reload(), 700);
+    } catch (err) { notify(err.message, 'error'); } finally { setSaving(false); }
   }
-  async function upload(file) {
+  async function upload(file, key = 'hero_image_url') {
     if (!file) return;
     setUploading(true);
-    try { const r = await uploadMedia(file); set('hero_image_url', r.url); } catch (err) { notify(err.message, 'error'); } finally { setUploading(false); }
+    try { const r = await uploadMedia(file); set(key, r.url); } catch (err) { notify(err.message, 'error'); } finally { setUploading(false); }
   }
 
   return (
@@ -67,6 +82,28 @@ export default function Pengaturan() {
           {openId === g.id && (
             <div className="xa-fgrid xa-acc-b">
               {g.fields.map(([key, label, type, hint]) => {
+                if (type === 'font-head' || type === 'font-body') {
+                  const list = type === 'font-head' ? HEADLINE_FONTS : BODY_FONTS;
+                  const cur = vals[key] || (type === 'font-head' ? 'red-hat' : 'inter');
+                  return (
+                    <div className="field" key={key}>
+                      <label>{label}</label>
+                      <link rel="stylesheet" href={previewHref()} />
+                      <div className="xa-fonts">
+                        {Object.entries(list).map(([id, f]) => (
+                          <button type="button" key={id} className={`xa-font${cur === id ? ' on' : ''}`} onClick={() => set(key, id)} aria-pressed={cur === id}>
+                            <span className="xa-font-sample" style={{ fontFamily: `${f.family}, sans-serif`, fontWeight: type === 'font-head' ? 800 : 500 }}>
+                              {type === 'font-head' ? 'Fiber Optik' : 'Data dikirim lewat cahaya'}
+                            </span>
+                            <b>{f.label}</b>
+                            <small>{f.note}</small>
+                          </button>
+                        ))}
+                      </div>
+                      {hint && <p className="xa-hint">{hint}</p>}
+                    </div>
+                  );
+                }
                 if (type === 'image') {
                   const v = vals[key] || '';
                   return (
@@ -74,7 +111,7 @@ export default function Pengaturan() {
                       <label>{label}</label>
                       <label className={`xa-imgbox${v ? ' has' : ''}`}>
                         {v ? <img src={v} alt="" /> : <span className="empty"><Icon name="upload" size={24} />{uploading ? 'Uploading…' : 'Ketuk untuk upload'}</span>}
-                        <input type="file" accept="image/*" hidden onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ''; }} />
+                        <input type="file" accept="image/*" hidden onChange={(e) => { upload(e.target.files?.[0], key); e.target.value = ''; }} />
                       </label>
                       {v && <button type="button" className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => set(key, '')}>Hapus gambar</button>}
                       {hint && <p className="xa-hint">{hint}</p>}

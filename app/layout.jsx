@@ -1,5 +1,7 @@
 import '../styles/global.css';
 import '../styles/xignal-ui.css';
+import { getSettings } from '../lib/xdata.js';
+import { resolveFonts } from '../lib/xfonts.js';
 
 // URL is set by Netlify at build/runtime; falls back to the planned production domain.
 const SITE_URL = process.env.URL || 'https://mysignal.id';
@@ -31,16 +33,16 @@ export const viewport = {
   themeColor: '#0B0B0F'
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  let fonts;
+  try { fonts = resolveFonts(await getSettings()); } catch { fonts = resolveFonts({}); }
   return (
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
+        <link href={fonts.href} rel="stylesheet" />
+        <style dangerouslySetInnerHTML={{ __html: `:root{--f-head:${fonts.head};--f-body:${fonts.body};}` }} />
       </head>
       <body>{children}</body>
     </html>
