@@ -1,11 +1,14 @@
+import Link from 'next/link';
 import { db } from '../../../lib/db.js';
+import { getSettings } from '../../../lib/xdata.js';
 import GalleryGrid from '../../../components/GalleryGrid.jsx';
+import SIcon from '../../../components/site/SIcon.jsx';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Gallery',
-  description: 'The Xi:gnal visual archive — technology photography, field documentation, and visual stories.',
+  title: 'Galeri',
+  description: 'Dokumentasi lapangan, instalasi fiber optik dan momen kegiatan Xignal.',
   alternates: { canonical: '/gallery' }
 };
 
@@ -16,66 +19,41 @@ async function getGalleryItems() {
 
 export default async function Gallery() {
   let items = [];
-  try { items = await getGalleryItems(); } catch { /* DB unavailable — page still renders */ }
+  try { items = await getGalleryItems(); } catch { /* DB belum siap, halaman tetap tampil */ }
+  const settings = await getSettings();
+  const yt = settings.social_youtube && settings.social_youtube !== '#' ? settings.social_youtube : null;
 
   return (
-    <main>
-      <section style={{ paddingBottom: 24 }}>
-        <div className="wrap">
-          <span className="eyebrow">Visual Archive</span>
-          <h1 style={{ fontSize: 'clamp(28px,4.4vw,44px)', marginTop: 14, marginBottom: 8 }}>Signal Gallery</h1>
-          <p style={{ color: 'var(--text-dim)', maxWidth: 560 }}>
-            Technology photography, field documentation, and visual stories from the Xi:gnal archive.
-          </p>
+    <>
+      <header className="x-phead">
+        <div className="x-wrap">
+          <nav className="x-crumb" aria-label="Breadcrumb"><Link href="/">Home</Link><SIcon name="chevronR" size={12} /><span>Galeri</span></nav>
+          <h1>Galeri <span className="x-grad-text">Lapangan</span></h1>
+          <p>Dokumentasi instalasi, perangkat jaringan dan momen kegiatan Xignal.</p>
         </div>
-      </section>
+      </header>
 
-      {/* Placeholder — replace href (and the thumbnail) with the real YouTube video/channel link once available. */}
-      <section style={{ paddingBottom: 36 }}>
-        <div className="wrap">
-          <a
-            href="https://youtube.com/@xignal"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              position: 'relative', display: 'block', borderRadius: 'var(--radius)', overflow: 'hidden',
-              border: '1px solid var(--border)', aspectRatio: '16/6', maxHeight: 340
-            }}
-          >
-            <img
-              src="https://picsum.photos/seed/xignal-youtube/1600/600"
-              alt="Watch Xi:gnal on YouTube"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
-            <div
-              style={{
-                position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12
-              }}
-            >
-              <div
-                style={{
-                  width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.15)',
-                  border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z" /></svg>
-              </div>
-              <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>Watch on YouTube</span>
-            </div>
-          </a>
-        </div>
-      </section>
+      {yt && (
+        <section className="x-sec" style={{ paddingBottom: 0 }}>
+          <div className="x-wrap">
+            <a className="x-card x-yt" href={yt} target="_blank" rel="noreferrer">
+              <span className="x-yt-play"><SIcon name="play" size={22} /></span>
+              <span><strong>Tonton di YouTube</strong><em>Video instalasi dan edukasi jaringan fiber optik</em></span>
+              <SIcon name="arrow" size={16} />
+            </a>
+          </div>
+        </section>
+      )}
 
-      <section>
-        <div className="wrap">
+      <section className="x-sec">
+        <div className="x-wrap">
           {items.length > 0 ? (
             <GalleryGrid items={items} />
           ) : (
-            <p style={{ color: 'var(--text-faint)' }}>Belum ada item galeri — tambahkan dari /admin/gallery.</p>
+            <p className="x-empty">Belum ada item galeri. Tambahkan dari admin di Gallery.</p>
           )}
         </div>
       </section>
-    </main>
+    </>
   );
 }

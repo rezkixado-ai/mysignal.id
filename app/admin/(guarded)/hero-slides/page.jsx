@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import {
   getHeroSlides, createHeroSlide, updateHeroSlide, deleteHeroSlide, uploadMedia
 } from '../../../../lib/api.js';
+import Icon from '../../../../components/Icon.jsx';
+import RowMenu from '../../../../components/admin/RowMenu.jsx';
+import useNewTrigger from '../../../../components/admin/useNewTrigger.js';
 
 const KB_OPTIONS = [
   { value: 'zoom-in', label: 'Zoom In' },
@@ -18,16 +21,12 @@ const EMPTY = {
   media_type: 'image', media_url: '', ken_burns: 'zoom-in', sort_order: 0, is_published: 1
 };
 
-function Toast({ toast }) {
-  if (!toast) return null;
-  return <div className={`toast ${toast.type}`}>{toast.message}</div>;
-}
-
 export default function AdminHeroSlides() {
   const [slides, setSlides] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const [open, setOpen] = useState(false); // phone: editor panel visible
   const [uploading, setUploading] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -38,25 +37,35 @@ export default function AdminHeroSlides() {
 
   async function refresh() {
     try { setSlides(await getHeroSlides(true)); } catch (err) { notify(err.message, 'error'); }
+    setLoaded(true);
   }
   useEffect(() => { refresh(); }, []);
 
-  function editSlide(slide) {
-    setForm({ ...EMPTY, ...slide });
+  function newSlide() {
+    setForm({ ...EMPTY, sort_order: slides.length });
+    setOpen(true);
+    window.scrollTo({ top: 0 });
+  }
+  useNewTrigger(newSlide);
+
+  function editSlide(s) {
+    setForm({ ...EMPTY, ...s });
+    setOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  function resetForm() { setForm({ ...EMPTY, sort_order: slides.length }); }
+  function closePanel() {
+    setOpen(false);
+    setForm({ ...EMPTY, sort_order: slides.length });
+  }
 
   async function handleFile(file) {
     if (!file) return;
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-    if (!isImage && !isVideo) { notify('Please upload an image or video file', 'error'); return; }
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) { notify('Pilih file gambar atau video', 'error'); return; }
     setUploading(true);
     try {
       const result = await uploadMedia(file);
       setForm((f) => ({ ...f, media_url: result.url, media_type: result.mediaType }));
-      notify('Media uploaded');
+      notify('Media ter-upload');
     } catch (err) {
       notify(err.message, 'error');
     } finally {
@@ -66,12 +75,12 @@ export default function AdminHeroSlides() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.title || !form.media_url) { notify('Title and media are required', 'error'); return; }
+    if (!form.title || !form.media_url) { notify('Judul dan media wajib diisi', 'error'); return; }
     setSaving(true);
     try {
-      if (form.id) { await updateHeroSlide(form); notify('Slide updated'); }
-      else { await createHeroSlide(form); notify('Slide created'); }
-      resetForm();
+      if (form.id) { await updateHeroSlide(form); notify('Slide di-update'); }
+      else { await createHeroSlide(form); notify('Slide ditambahkan'); }
+      closePanel();
       refresh();
     } catch (err) {
       notify(err.message, 'error');
@@ -80,82 +89,83 @@ export default function AdminHeroSlides() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this slide?')) return;
-    try { await deleteHeroSlide(id); notify('Slide deleted'); refresh(); } catch (err) { notify(err.message, 'error'); }
+  async function handleDelete(s) {
+    if (!confirm(`Hapus slide "${s.title}"?`)) return;
+    try { await deleteHeroSlide(s.id); notify('Slide dihapus'); refresh(); } catch (err) { notify(err.message, 'error'); }
   }
 
-  async function togglePublish(slide) {
-    try { await updateHeroSlide({ ...slide, is_published: slide.is_published ? 0 : 1 }); refresh(); } catch (err) { notify(err.message, 'error'); }
+  async function togglePublish(s) {
+    try { await updateHeroSlide({ ...s, is_published: s.is_published ? 0 : 1 }); refresh(); } catch (err) { notify(err.message, 'error'); }
   }
 
   return (
     <div>
-      <div className="admin-topbar">
-        <h1 style={{ fontSize: 24 }}>Hero Slider</h1>
-        {form.id && <button className="btn btn-ghost" onClick={resetForm}>+ New Slide</button>}
+      <div className="adm-head">
+        <div>
+          <h1 className="adm-h1 hl">Hero Slider</h1>
+          <p className="adm-sub">{loaded ? `${slides.length} slide` : 'Memuat…'}</p>
+        </div>
+        <button type="button" className="btn" onClick={newSlide}><Icon name="plus" size={18} /> Baru</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: 24, alignItems: 'start' }}>
-        <form className="card" onSubmit={handleSubmit}>
-          <h3 style={{ fontSize: 15, marginBottom: 16 }}>{form.id ? 'Edit Slide' : 'New Slide'}</h3>
-
-          <div
-            className={`upload-box${dragging ? ' dragging' : ''}`}
-            onClick={() => document.getElementById('mediaInput').click()}
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files?.[0]); }}
-          >
-            {uploading ? 'Uploading…' : 'Click or drag an image / video here'}
-            <input id="mediaInput" type="file" accept="image/*,video/*" hidden onChange={(e) => handleFile(e.target.files?.[0])} />
+      <div className="admin-split">
+        <form className={`editor-panel card${open ? '' : ' closed'}`} onSubmit={handleSubmit}>
+          <div className="ep-head">
+            <h3>{form.id ? 'Edit slide' : 'Slide baru'}</h3>
+            <button type="button" className="icon-btn plain ep-close" onClick={closePanel} aria-label="Tutup"><Icon name="close" /></button>
           </div>
 
-          {form.media_url && (
-            <div className="preview-media">
-              {form.media_type === 'video'
+          <label className={`cover-box${form.media_url ? ' has' : ''}`}>
+            {form.media_url ? (
+              form.media_type === 'video'
                 ? <video src={form.media_url} muted loop autoPlay playsInline />
-                : <img src={form.media_url} alt="preview" />}
+                : <img src={form.media_url} alt="preview" />
+            ) : (
+              <span className="cover-empty"><Icon name="upload" size={26} />{uploading ? 'Uploading…' : 'Ketuk untuk upload gambar / video'}</span>
+            )}
+            <input type="file" accept="image/*,video/*" hidden onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ''; }} />
+          </label>
+          {form.media_url && (
+            <div className="cover-actions">
+              <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+                {uploading ? 'Uploading…' : 'Ganti media'}
+                <input type="file" accept="image/*,video/*" hidden onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ''; }} />
+              </label>
             </div>
           )}
 
           <div className="field" style={{ marginTop: 16 }}>
-            <label>Ken Burns Effect</label>
+            <label>Efek Ken Burns</label>
             <select value={form.ken_burns} onChange={(e) => setForm({ ...form, ken_burns: e.target.value })}>
               {KB_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-
-          <div className="field">
-            <label>Eyebrow / Category</label>
+          <div className="field" style={{ marginTop: 14 }}>
+            <label>Eyebrow / kategori</label>
             <input type="text" placeholder="Cybersecurity" value={form.eyebrow} onChange={(e) => setForm({ ...form, eyebrow: e.target.value })} />
           </div>
-
-          <div className="field">
-            <label>Title</label>
-            <input type="text" placeholder="The New Threats Behind Our Digital World" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+          <div className="field" style={{ marginTop: 14 }}>
+            <label>Judul</label>
+            <input type="text" placeholder="The New Threats, Behind Our Digital World" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           </div>
-
-          <div className="field">
-            <label>Description</label>
+          <div className="field" style={{ marginTop: 14 }}>
+            <label>Deskripsi</label>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
-
-          <div className="form-row">
+          <div className="form-row" style={{ marginTop: 14 }}>
             <div className="field">
-              <label>CTA Label</label>
+              <label>Label tombol</label>
               <input type="text" value={form.cta_label} onChange={(e) => setForm({ ...form, cta_label: e.target.value })} />
             </div>
             <div className="field">
-              <label>CTA Link</label>
-              <input type="text" value={form.cta_url} onChange={(e) => setForm({ ...form, cta_url: e.target.value })} placeholder="/article/your-slug" />
+              <label>Link tombol</label>
+              <input type="text" inputMode="url" value={form.cta_url} onChange={(e) => setForm({ ...form, cta_url: e.target.value })} placeholder="/article/slug-artikel" />
             </div>
           </div>
-
-          <div className="form-row">
+          <div className="form-row" style={{ marginTop: 14 }}>
             <div className="field">
-              <label>Sort Order</label>
-              <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} />
+              <label>Urutan</label>
+              <input type="number" inputMode="numeric" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} />
             </div>
             <div className="field">
               <label>Status</label>
@@ -166,33 +176,38 @@ export default function AdminHeroSlides() {
             </div>
           </div>
 
-          <button className="btn" type="submit" disabled={saving || uploading} style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
-            {saving ? 'Saving…' : form.id ? 'Update Slide' : 'Add Slide'}
-          </button>
+          <div className="ep-actions" style={{ marginTop: 18 }}>
+            <button type="button" className="btn btn-ghost ep-close" onClick={closePanel}>Batal</button>
+            <button className="btn" type="submit" disabled={saving || uploading}>{saving ? 'Menyimpan…' : form.id ? 'Update' : 'Tambah slide'}</button>
+          </div>
         </form>
 
-        <div className="slide-list">
-          {slides.length === 0 && <p style={{ color: 'var(--text-faint)', fontSize: 13.5 }}>No slides yet — add your first one.</p>}
+        <div className="clist">
+          {loaded && slides.length === 0 && <p className="adm-sub">Belum ada slide — tambah yang pertama.</p>}
           {slides.map((s) => (
-            <div className="slide-row" key={s.id}>
-              <div className="thumb">
-                {s.media_type === 'video' ? <video src={s.media_url} muted /> : <img src={s.media_url} alt={s.title} />}
-              </div>
-              <div className="meta">
-                <strong>{s.title}</strong>
-                <span>{s.eyebrow} · {s.ken_burns} · {s.is_published ? 'Published' : 'Draft'}</span>
-              </div>
-              <div className="row-actions">
-                <button onClick={() => togglePublish(s)}>{s.is_published ? 'Unpublish' : 'Publish'}</button>
-                <button onClick={() => editSlide(s)}>Edit</button>
-                <button onClick={() => handleDelete(s.id)} style={{ color: 'var(--red)' }}>Delete</button>
-              </div>
+            <div className="crow" key={s.id}>
+              <button type="button" className="crow-main" onClick={() => editSlide(s)}>
+                <span className="crow-thumb">
+                  {s.media_type === 'video' ? <video src={s.media_url} muted /> : <img src={s.media_url} alt="" loading="lazy" />}
+                </span>
+                <span className="crow-body">
+                  <strong>{s.title}</strong>
+                  <span className="crow-meta">
+                    <em className={`badge ${s.is_published ? 'pub' : 'draft'}`}>{s.is_published ? 'PUBLISH' : 'DRAFT'}</em>
+                    <span>{s.eyebrow}</span><span>#{s.sort_order}</span>
+                  </span>
+                </span>
+              </button>
+              <RowMenu items={[
+                { label: 'Edit', onClick: () => editSlide(s) },
+                { label: s.is_published ? 'Jadikan draft' : 'Publish', onClick: () => togglePublish(s) },
+                { label: 'Hapus', danger: true, onClick: () => handleDelete(s) }
+              ]} />
             </div>
           ))}
         </div>
       </div>
-
-      <Toast toast={toast} />
+      {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
     </div>
   );
 }

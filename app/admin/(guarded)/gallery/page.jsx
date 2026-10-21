@@ -4,25 +4,24 @@ import { useEffect, useState } from 'react';
 import {
   getGallery, createGalleryItem, updateGalleryItem, deleteGalleryItem, uploadMedia
 } from '../../../../lib/api.js';
+import Icon from '../../../../components/Icon.jsx';
+import RowMenu from '../../../../components/admin/RowMenu.jsx';
+import useNewTrigger from '../../../../components/admin/useNewTrigger.js';
 
 const SHAPE_OPTIONS = [
-  { value: 'big', label: 'Big (2×2 — tall feature tile)' },
-  { value: 'wide', label: 'Wide (2×1 — horizontal banner tile)' },
-  { value: 'normal', label: 'Normal (1×1 — square tile)' }
+  { value: 'big', label: 'Big (2×2 — tile tinggi)' },
+  { value: 'wide', label: 'Wide (2×1 — tile lebar)' },
+  { value: 'normal', label: 'Normal (1×1 — kotak)' }
 ];
 
 const EMPTY = { id: null, title: '', tag: '', media_type: 'image', media_url: '', layout_span: 'normal', sort_order: 0, is_published: 1 };
 
-function Toast({ toast }) {
-  if (!toast) return null;
-  return <div className={`toast ${toast.type}`}>{toast.message}</div>;
-}
-
 export default function AdminGallery() {
   const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -33,22 +32,35 @@ export default function AdminGallery() {
 
   async function refresh() {
     try { setItems(await getGallery(true)); } catch (err) { notify(err.message, 'error'); }
+    setLoaded(true);
   }
   useEffect(() => { refresh(); }, []);
 
-  function resetForm() { setForm({ ...EMPTY, sort_order: items.length }); }
-  function editItem(item) { setForm({ ...EMPTY, ...item }); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function newItem() {
+    setForm({ ...EMPTY, sort_order: items.length });
+    setOpen(true);
+    window.scrollTo({ top: 0 });
+  }
+  useNewTrigger(newItem);
+
+  function editItem(it) {
+    setForm({ ...EMPTY, ...it });
+    setOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function closePanel() {
+    setOpen(false);
+    setForm({ ...EMPTY, sort_order: items.length });
+  }
 
   async function handleFile(file) {
     if (!file) return;
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-    if (!isImage && !isVideo) { notify('Please upload an image or video file', 'error'); return; }
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) { notify('Pilih file gambar atau video', 'error'); return; }
     setUploading(true);
     try {
       const result = await uploadMedia(file);
       setForm((f) => ({ ...f, media_url: result.url, media_type: result.mediaType }));
-      notify('Media uploaded');
+      notify('Media ter-upload');
     } catch (err) {
       notify(err.message, 'error');
     } finally {
@@ -58,12 +70,12 @@ export default function AdminGallery() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.media_url) { notify('Upload media first', 'error'); return; }
+    if (!form.media_url) { notify('Upload media dulu', 'error'); return; }
     setSaving(true);
     try {
-      if (form.id) { await updateGalleryItem(form); notify('Item updated'); }
-      else { await createGalleryItem(form); notify('Item added'); }
-      resetForm();
+      if (form.id) { await updateGalleryItem(form); notify('Item di-update'); }
+      else { await createGalleryItem(form); notify('Item ditambahkan'); }
+      closePanel();
       refresh();
     } catch (err) {
       notify(err.message, 'error');
@@ -72,67 +84,71 @@ export default function AdminGallery() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this gallery item?')) return;
-    try { await deleteGalleryItem(id); notify('Deleted'); refresh(); } catch (err) { notify(err.message, 'error'); }
+  async function handleDelete(it) {
+    if (!confirm('Hapus item gallery ini?')) return;
+    try { await deleteGalleryItem(it.id); notify('Terhapus'); refresh(); } catch (err) { notify(err.message, 'error'); }
   }
 
-  async function togglePublish(item) {
-    try { await updateGalleryItem({ ...item, is_published: item.is_published ? 0 : 1 }); refresh(); } catch (err) { notify(err.message, 'error'); }
+  async function togglePublish(it) {
+    try { await updateGalleryItem({ ...it, is_published: it.is_published ? 0 : 1 }); refresh(); } catch (err) { notify(err.message, 'error'); }
   }
 
   return (
     <div>
-      <div className="admin-topbar">
-        <h1 style={{ fontSize: 24 }}>Gallery</h1>
-        {form.id && <button className="btn btn-ghost" onClick={resetForm}>+ New Item</button>}
+      <div className="adm-head">
+        <div>
+          <h1 className="adm-h1 hl">Gallery</h1>
+          <p className="adm-sub">{loaded ? `${items.length} item` : 'Memuat…'}</p>
+        </div>
+        <button type="button" className="btn" onClick={newItem}><Icon name="plus" size={18} /> Baru</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: 24, alignItems: 'start' }}>
-        <form className="card" onSubmit={handleSubmit}>
-          <h3 style={{ fontSize: 15, marginBottom: 16 }}>{form.id ? 'Edit Item' : 'New Item'}</h3>
-
-          <div
-            className={`upload-box${dragging ? ' dragging' : ''}`}
-            onClick={() => document.getElementById('galleryFile').click()}
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files?.[0]); }}
-          >
-            {uploading ? 'Uploading…' : 'Click or drag an image / video here'}
-            <input id="galleryFile" type="file" accept="image/*,video/*" hidden onChange={(e) => handleFile(e.target.files?.[0])} />
+      <div className="admin-split">
+        <form className={`editor-panel card${open ? '' : ' closed'}`} onSubmit={handleSubmit}>
+          <div className="ep-head">
+            <h3>{form.id ? 'Edit item' : 'Item baru'}</h3>
+            <button type="button" className="icon-btn plain ep-close" onClick={closePanel} aria-label="Tutup"><Icon name="close" /></button>
           </div>
 
-          {form.media_url && (
-            <div className="preview-media">
-              {form.media_type === 'video'
+          <label className={`cover-box${form.media_url ? ' has' : ''}`}>
+            {form.media_url ? (
+              form.media_type === 'video'
                 ? <video src={form.media_url} muted loop autoPlay playsInline />
-                : <img src={form.media_url} alt="preview" />}
+                : <img src={form.media_url} alt="preview" />
+            ) : (
+              <span className="cover-empty"><Icon name="upload" size={26} />{uploading ? 'Uploading…' : 'Ketuk untuk upload gambar / video'}</span>
+            )}
+            <input type="file" accept="image/*,video/*" hidden onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ''; }} />
+          </label>
+          {form.media_url && (
+            <div className="cover-actions">
+              <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+                {uploading ? 'Uploading…' : 'Ganti media'}
+                <input type="file" accept="image/*,video/*" hidden onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ''; }} />
+              </label>
             </div>
           )}
 
           <div className="field" style={{ marginTop: 16 }}>
-            <label>Card Shape</label>
+            <label>Bentuk kartu</label>
             <select value={form.layout_span} onChange={(e) => setForm({ ...form, layout_span: e.target.value })}>
               {SHAPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-
-          <div className="form-row">
+          <div className="form-row" style={{ marginTop: 14 }}>
             <div className="field">
-              <label>Tag / Category</label>
+              <label>Tag / kategori</label>
               <input type="text" placeholder="Fiber Optic" value={form.tag} onChange={(e) => setForm({ ...form, tag: e.target.value })} />
             </div>
             <div className="field">
-              <label>Title (optional, for alt text)</label>
+              <label>Judul (opsional, alt text)</label>
               <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             </div>
           </div>
-
-          <div className="form-row">
+          <div className="form-row" style={{ marginTop: 14 }}>
             <div className="field">
-              <label>Sort Order</label>
-              <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} />
+              <label>Urutan</label>
+              <input type="number" inputMode="numeric" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} />
             </div>
             <div className="field">
               <label>Status</label>
@@ -143,33 +159,38 @@ export default function AdminGallery() {
             </div>
           </div>
 
-          <button className="btn" type="submit" disabled={saving || uploading} style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
-            {saving ? 'Saving…' : form.id ? 'Update Item' : 'Add Item'}
-          </button>
+          <div className="ep-actions" style={{ marginTop: 18 }}>
+            <button type="button" className="btn btn-ghost ep-close" onClick={closePanel}>Batal</button>
+            <button className="btn" type="submit" disabled={saving || uploading}>{saving ? 'Menyimpan…' : form.id ? 'Update' : 'Tambah item'}</button>
+          </div>
         </form>
 
-        <div className="slide-list">
-          {items.length === 0 && <p style={{ color: 'var(--text-faint)', fontSize: 13.5 }}>No gallery items yet — add your first one.</p>}
+        <div className="clist">
+          {loaded && items.length === 0 && <p className="adm-sub">Belum ada item — tambah yang pertama.</p>}
           {items.map((it) => (
-            <div className="slide-row" key={it.id}>
-              <div className="thumb">
-                {it.media_type === 'video' ? <video src={it.media_url} muted /> : <img src={it.media_url} alt={it.title || it.tag} />}
-              </div>
-              <div className="meta">
-                <strong>{it.tag || it.title || 'Untitled'}</strong>
-                <span>{it.layout_span} · {it.is_published ? 'Published' : 'Draft'}</span>
-              </div>
-              <div className="row-actions">
-                <button onClick={() => togglePublish(it)}>{it.is_published ? 'Unpublish' : 'Publish'}</button>
-                <button onClick={() => editItem(it)}>Edit</button>
-                <button onClick={() => handleDelete(it.id)} style={{ color: 'var(--red)' }}>Delete</button>
-              </div>
+            <div className="crow" key={it.id}>
+              <button type="button" className="crow-main" onClick={() => editItem(it)}>
+                <span className="crow-thumb">
+                  {it.media_type === 'video' ? <video src={it.media_url} muted /> : <img src={it.media_url} alt="" loading="lazy" />}
+                </span>
+                <span className="crow-body">
+                  <strong>{it.tag || it.title || 'Untitled'}</strong>
+                  <span className="crow-meta">
+                    <em className={`badge ${it.is_published ? 'pub' : 'draft'}`}>{it.is_published ? 'PUBLISH' : 'DRAFT'}</em>
+                    <span>{it.layout_span}</span><span>#{it.sort_order}</span>
+                  </span>
+                </span>
+              </button>
+              <RowMenu items={[
+                { label: 'Edit', onClick: () => editItem(it) },
+                { label: it.is_published ? 'Jadikan draft' : 'Publish', onClick: () => togglePublish(it) },
+                { label: 'Hapus', danger: true, onClick: () => handleDelete(it) }
+              ]} />
             </div>
           ))}
         </div>
       </div>
-
-      <Toast toast={toast} />
+      {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
     </div>
   );
 }

@@ -1,8 +1,9 @@
-const SITE_URL = 'https://mysignal.id'; // update once the real domain is live
+import { SITE_URL } from '../lib/site.js';
 
 export default function robots() {
   return {
-    rules: { userAgent: '*', allow: '/', disallow: '/admin/' },
-    sitemap: `${SITE_URL}/sitemap.xml`
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/admin', '/api/'] }],
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL
   };
 }
