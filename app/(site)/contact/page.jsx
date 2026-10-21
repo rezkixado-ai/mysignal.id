@@ -58,10 +58,10 @@ export default async function Contact() {
               <span>Respon cepat untuk harga dan ketersediaan produk.</span>
               <em>Chat sekarang <SIcon name="arrow" size={13} /></em>
             </a>
-            <a className="x-card x-cc" href="mailto:hello@mysignal.id">
+            <a className="x-card x-cc" href={`mailto:${settings.contact_email}`}>
               <span className="x-cc-ic"><SIcon name="file" size={22} /></span>
               <strong>Email</strong>
-              <span>hello@mysignal.id</span>
+              <span>{settings.contact_email}</span>
               <em>Kirim email <SIcon name="arrow" size={13} /></em>
             </a>
             {settings.social_instagram && settings.social_instagram !== '#' ? (

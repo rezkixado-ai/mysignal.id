@@ -19,6 +19,7 @@ const GROUPS = [
   ] },
   { id: 'kontak', title: 'Kontak & WhatsApp', fields: [
     ['wa_number', 'Nomor WhatsApp', T, 'Format 62812xxxx tanpa + atau spasi. Dipakai semua tombol WhatsApp.'],
+    ['contact_email', 'Email kontak', T, 'Tampil di halaman Kontak.'],
     ['footer_tagline', 'Tagline footer', A],
     ['social_instagram', 'Link Instagram', T], ['social_youtube', 'Link YouTube', T], ['social_linkedin', 'Link LinkedIn', T]
   ] },

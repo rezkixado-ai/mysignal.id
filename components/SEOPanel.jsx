@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Icon from './Icon.jsx';
 import { xSeoIndex, xSeoPage } from '../lib/xapi.js';
 
-const SITE = 'mysignal.id';
 const SITE_NAME = 'Xignal';
 
 /* ───────────── util teks ───────────── */
@@ -136,7 +135,7 @@ function analyze(a, ctx = {}) {
   ex.ordered.forEach((x) => { if (x.k === 'h') run = 0; else { run += wc(x.t); maxRun = Math.max(maxRun, run); } });
 
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isInternal = (h) => /^(\/|#)/.test(h) || h.includes(SITE) || (host && h.includes(host));
+  const isInternal = (h) => /^(\/|#)/.test(h) || (host && h.includes(host));
   const intLinks = ex.links.filter((h) => h && isInternal(h)).length;
   const extLinks = ex.links.filter((h) => h && /^https?:/i.test(h) && !isInternal(h)).length;
   const imgNoCap = ex.images.filter((i) => !i.cap).length;
@@ -495,6 +494,7 @@ export default function SEOPanel({ article = {}, onApply }) {
   const t = tone(r.score);
   const { seoTitle, metaDesc, slug } = r.serp;
   const order = { bad: 0, warn: 1, good: 2 };
+  const SITE = typeof window !== 'undefined' ? window.location.hostname : 'situs-anda';
   const url = `https://${SITE} › article › ${slug || 'slug-artikel'}`;
 
   return (

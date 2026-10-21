@@ -1,8 +1,10 @@
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '../../../../lib/db.js';
 import { renderBlocks, getFaqJsonLd } from '../../../../lib/render-blocks.jsx';
 import { getSettings, waLink, fmtDate } from '../../../../lib/xdata.js';
+import { ensureSchema } from '../../../../lib/xschema.js';
+import { SITE_URL, SITE_NAME, abs } from '../../../../lib/site.js';
 import { ArticleCard } from '../../../../components/site/Cards.jsx';
 import Media from '../../../../components/site/Media.jsx';
 import SIcon from '../../../../components/site/SIcon.jsx';
@@ -30,6 +32,24 @@ async function getArticle(slug) {
   return { ...article, media: media.rows, contentBlocks };
 }
 
+// SEO lanjutan per artikel (noindex, canonical, OG). Aman kalau tabel belum ada.
+async function getSeoExtra(id) {
+  try {
+    await ensureSchema();
+    const r = await db().execute({ sql: 'SELECT noindex, canonical, og_title, og_description, og_image FROM article_seo WHERE article_id = ?', args: [String(id)] });
+    return r.rows[0] ? { ...r.rows[0] } : {};
+  } catch { return {}; }
+}
+
+// Slug lama → slug baru (dicatat otomatis saat slug diganti di admin).
+async function findRedirect(slug) {
+  try {
+    await ensureSchema();
+    const r = await db().execute({ sql: 'SELECT new_slug FROM article_redirects WHERE old_slug = ?', args: [slug] });
+    return r.rows[0]?.new_slug || null;
+  } catch { return null; }
+}
+
 async function getRelated(article) {
   try {
     const r = await db().execute({
@@ -46,15 +66,27 @@ export async function generateMetadata({ params }) {
   try { article = await getArticle(slug); } catch { article = null; }
   if (!article) return { title: 'Artikel tidak ditemukan', robots: { index: false, follow: false } };
 
+  const x = await getSeoExtra(article.id);
   const title = article.meta_title || article.title;
   const description = article.meta_description || article.excerpt || undefined;
-  const image = article.cover_media_type === 'image' && article.cover_media_url ? [article.cover_media_url] : undefined;
+  const ogTitle = x.og_title || title;
+  const ogDesc = x.og_description || description;
+  const cover = article.cover_media_type === 'image' && article.cover_media_url ? article.cover_media_url : '';
+  const img = x.og_image || cover || '/xignal-logo.png';
+  const canonical = x.canonical ? x.canonical : `/article/${slug}`;
+  const noindex = Number(x.noindex) === 1;
   return {
     title,
     description,
-    alternates: { canonical: `/article/${slug}` },
-    openGraph: { title, description, images: image, type: 'article', publishedTime: article.published_at, modifiedTime: article.updated_at },
-    twitter: { card: 'summary_large_image', title, description, images: image }
+    alternates: { canonical },
+    robots: noindex ? { index: false, follow: true } : undefined,
+    openGraph: {
+      title: ogTitle, description: ogDesc, type: 'article', siteName: SITE_NAME, locale: 'id_ID',
+      url: canonical, images: [{ url: img, alt: article.title }],
+      publishedTime: article.published_at, modifiedTime: article.updated_at || article.published_at,
+      section: article.category || undefined
+    },
+    twitter: { card: 'summary_large_image', title: ogTitle, description: ogDesc, images: [img] }
   };
 }
 
@@ -62,11 +94,15 @@ export default async function ArticleDetail({ params }) {
   const { slug } = params;
   let article;
   try { article = await getArticle(slug); } catch { article = null; }
-  if (!article) notFound();
+  if (!article) {
+    const to = await findRedirect(slug);
+    if (to && to !== slug) permanentRedirect(`/article/${to}`);
+    notFound();
+  }
 
   const [related, settings] = await Promise.all([getRelated(article), getSettings()]);
   const wa = waLink(settings, `Halo Xignal, saya baca artikel "${article.title}" dan ingin berdiskusi.`);
-  const site = process.env.SITE_URL || process.env.URL || 'https://mysignal.id';
+  const site = SITE_URL;
 
   const authorName = settings.article_author_name || 'Admin Xignal';
   const authorRole = settings.article_author_role || '';
@@ -83,13 +119,25 @@ export default async function ArticleDetail({ params }) {
     dateModified: article.updated_at || article.published_at,
     author: { '@type': authorPhoto || settings.article_author_name ? 'Person' : 'Organization', name: authorName },
     publisher: { '@type': 'Organization', name: 'Xignal' },
-    mainEntityOfPage: `${site}/article/${slug}`
+    mainEntityOfPage: `${site}/article/${slug}`,
+    inLanguage: 'id-ID',
+    ...(article.category ? { articleSection: article.category } : {})
+  };
+  const crumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: 'Artikel', item: abs('/artikel') },
+      { '@type': 'ListItem', position: 3, name: article.title, item: `${site}/article/${slug}` }
+    ]
   };
   const faqJsonLd = article.contentBlocks ? getFaqJsonLd(article.contentBlocks) : null;
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbLd) }} />
       {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
 
       <article className="x-art">

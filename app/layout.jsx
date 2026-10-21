@@ -4,7 +4,7 @@ import { getSettings } from '../lib/xdata.js';
 import { resolveFonts } from '../lib/xfonts.js';
 
 // URL is set by Netlify at build/runtime; falls back to the planned production domain.
-const SITE_URL = process.env.URL || 'https://mysignal.id';
+import { SITE_URL } from '../lib/site.js';
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),

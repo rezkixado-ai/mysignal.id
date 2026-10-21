@@ -718,14 +718,18 @@
 .xs .x-toc-h{display:flex; width:100%; align-items:center; justify-content:space-between; min-height:50px; background:none; border:0; color:#fff; font-family:var(--x-title); font-size:16px;}
 .xs .x-toc-h svg{transition:transform .25s; color:var(--x-dim);}
 .xs .x-toc.open .x-toc-h svg{transform:rotate(180deg);}
-.xs .x-toc-list{list-style:none; margin:0; padding:0; display:none; position:relative; padding-left:4px;}
-.xs .x-toc.open .x-toc-list{display:block; padding-bottom:10px;}
-.xs .x-toc-list::before{content:""; position:absolute; left:8px; top:14px; bottom:22px; width:1px; background:var(--x-line);}
-.xs .x-toc-list li{position:relative; padding-left:26px;}
-.xs .x-toc-list li::before{content:""; position:absolute; left:4px; top:50%; width:8px; height:8px; margin-top:-4px; border-radius:50%; background:#2A4560; transition:background .2s, box-shadow .2s;}
-.xs .x-toc-list li.on::before{background:#22D3EE; box-shadow:0 0 0 4px rgba(34,211,238,.2);}
-.xs .x-toc-list li.sub{padding-left:40px;} .xs .x-toc-list li.sub::before{left:6px; width:5px; height:5px; margin-top:-2.5px;}
-.xs .x-toc-list a{display:block; padding:9px 0; min-height:40px; font-size:14.5px; line-height:1.35; color:var(--x-dim); transition:color .2s;}
+.xs .x-toc-list{list-style:none; margin:0; padding:0; display:none;}
+.xs .x-toc.open .x-toc-list{display:block; padding:2px 0 12px;}
+/* garis & titik: satu sumbu di x=8px; garis disambung per item (dari titik ke titik berikutnya) */
+.xs .x-toc-list li{position:relative; padding-left:28px;}
+.xs .x-toc-list li::after{content:""; position:absolute; left:7.5px; top:20px; bottom:-20px; width:1px; background:rgba(56,189,248,.28); z-index:0;}
+.xs .x-toc-list li:last-child::after{display:none;}
+.xs .x-toc-list li::before{content:""; position:absolute; left:3px; top:20px; width:10px; height:10px; margin-top:-5px; box-sizing:border-box; border-radius:50%; background:#0B1624; border:2px solid #2F5170; z-index:1; transition:background .2s, border-color .2s, box-shadow .2s;}
+.xs .x-toc-list li.sub{padding-left:46px;}
+.xs .x-toc-list li.sub::before{left:5px; width:6px; height:6px; margin-top:-3px; border-width:0; background:#2F5170;}
+.xs .x-toc-list li.on::before{background:#22D3EE; border-color:#22D3EE; box-shadow:0 0 0 4px rgba(34,211,238,.2);}
+.xs .x-toc-list li.sub.on::before{background:#22D3EE; box-shadow:0 0 0 3px rgba(34,211,238,.22);}
+.xs .x-toc-list a{display:block; padding:10px 0; min-height:42px; font-size:14.5px; line-height:1.35; color:var(--x-dim); transition:color .2s;}
 .xs .x-toc-list li.on a{color:#22D3EE; font-weight:600;}
 .xs .x-toc-list a:hover{color:#fff;}
 

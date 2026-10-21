@@ -10,6 +10,8 @@ import ArticlePreviewModal from '../../../../components/ArticlePreviewModal.jsx'
 import Icon from '../../../../components/Icon.jsx';
 import RowMenu from '../../../../components/admin/RowMenu.jsx';
 import useNewTrigger from '../../../../components/admin/useNewTrigger.js';
+import ArticleSeoExtra from '../../../../components/admin/ArticleSeoExtra.jsx';
+import { xArticleSeoGet, xArticleSeoSave } from '../../../../lib/xapi.js';
 
 const CATEGORIES = ['Edukasi', 'Panduan', 'Produk', 'Teknis', 'Troubleshooting', 'Fiber Optik', 'Networking', 'Internet', 'Cybersecurity', 'Artificial Intelligence', 'Cloud', 'Hardware'];
 const TYPES = [
@@ -36,6 +38,8 @@ export default function AdminArticles() {
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [extra, setExtra] = useState({});
+  const origSlug = useRef('');
   const [uploadingCover, setUploadingCover] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -73,6 +77,8 @@ export default function AdminArticles() {
 
   function newArticle() {
     setForm(EMPTY);
+    setExtra({});
+    origSlug.current = '';
     setDirty(false);
     setEditing(true);
     window.scrollTo({ top: 0 });
@@ -90,6 +96,9 @@ export default function AdminArticles() {
         try { contentBlocks = typeof full.content_blocks === 'string' ? JSON.parse(full.content_blocks) : full.content_blocks; } catch { /* pre-migration article: keep empty */ }
       }
       setForm({ ...EMPTY, ...a, content_blocks: contentBlocks });
+      origSlug.current = a.slug || '';
+      setExtra({});
+      xArticleSeoGet(a.id).then(setExtra).catch(() => {});
       setDirty(false);
       setEditing(true);
       window.scrollTo({ top: 0 });
@@ -129,7 +138,21 @@ export default function AdminArticles() {
       // Pull the current blocks straight from Editor.js; form.content_blocks can lag behind its debounce.
       const freshBlocks = editorRef.current ? await editorRef.current.getBlocks() : form.content_blocks;
       const payload = { ...form, is_published: publishState, content_blocks: freshBlocks };
-      if (form.id) { await updateArticle(payload); notify('Artikel di-update'); }
+      if (form.id) {
+        await updateArticle(payload);
+        // slug berubah → catat redirect 301 supaya link lama (Google, WhatsApp, dll) tidak 404
+        let newSlug = (payload.slug || '').trim();
+        try { // pakai slug yang benar-benar tersimpan (server bisa merapikan/menambah akhiran)
+          const list = await getArticles();
+          const cur = Array.isArray(list) ? list.find((x) => String(x.id) === String(form.id)) : null;
+          if (cur?.slug) newSlug = cur.slug;
+        } catch { /* pakai slug dari form */ }
+        if (origSlug.current && newSlug && newSlug !== origSlug.current) {
+          try { await xArticleSeoSave({ redirect: { from: origSlug.current, to: newSlug } }); } catch { /* tidak menghentikan simpan */ }
+        }
+        try { await xArticleSeoSave({ id: form.id, ...extra }); } catch (e) { notify(`Artikel tersimpan, tapi SEO lanjutan gagal: ${e.message}`, 'error'); setEditing(false); setDirty(false); setForm(EMPTY); refresh(); return; }
+        notify('Artikel di-update');
+      }
       else { await createArticle(payload); notify(publishState ? 'Artikel terbit' : 'Draft tersimpan'); }
       setEditing(false);
       setDirty(false);
@@ -216,6 +239,7 @@ export default function AdminArticles() {
                   <label>Meta description (kosong = pakai excerpt)</label>
                   <textarea value={form.meta_description} onChange={(e) => set({ meta_description: e.target.value })} maxLength={170} />
                 </div>
+                <div style={{ marginTop: 14 }}><ArticleSeoExtra value={extra} onChange={(v) => { setExtra(v); setDirty(true); }} canSave={!!form.id} onError={(m) => notify(m, 'error')} /></div>
                 <div style={{ marginTop: 14 }}><SEOPanel article={form} onApply={(patch) => set(patch)} /></div>
               </div>
             </details>
